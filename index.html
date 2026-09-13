@@ -107,7 +107,7 @@ input,select,button{width:100%;padding:13px;border-radius:11px;border:1px solid 
 <script>
 'use strict';
 // IMPORTANT: after creating the separate V2 Apps Script deployment, paste its /exec URL here.
-const API_URL = 'https://script.google.com/macros/s/AKfycbxopWsQ5yNKJ_8qSD0SNmW1UNm6eVvycSOWec6pqfkOL4jh-BsD97-cRMSt_4nNO_a6/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzIh8ZYf6UwO3tnDyjiel9oRmoU8c1mq97s9JisdIvMzC708ehm1BX18eGc4HoEWOlx1A/exec';
 let TOKEN='', USER=null, currentPage='start', html5Qr=null, cameraContext=null, requestSeq=0, HW_BUFFER='', HW_TIMER=null;
 const pending=new Map(), $=id=>document.getElementById(id);
 const flows={start:{driver:{value:'',method:'CAMERA'},car:{value:'',method:'CAMERA'},scanner:{value:'',method:'CAMERA'}},return:{driver:{value:'',method:'CAMERA'},car:{value:'',method:'CAMERA'},scanner:{value:'',method:'CAMERA'}}};
