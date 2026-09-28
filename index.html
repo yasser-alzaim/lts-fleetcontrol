@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
-<title>LTS FleetControl FAST V5.0</title>
+<title>LTS FleetControl V5.0</title>
 <meta name="fleetcontrol-version" content="V5.0">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -134,7 +134,9 @@ html.restoringSession .restoreScreen{display:flex}
 .shiftToolbarActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
 .shiftToolbarActions button{width:100%}
 .shiftSummary{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 11px}
-.shiftSummary .sumPill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;background:#f8fafc}
+.shiftSummary .sumPill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;background:#f8fafc;cursor:pointer;appearance:none;-webkit-appearance:none;line-height:1.2}
+.shiftSummary .sumPill:hover{filter:brightness(.97)}
+.shiftSummary .sumPill.active{box-shadow:0 0 0 2px #fff,0 0 0 4px #17354d;transform:translateY(-1px)}
 .shiftSummary .sumTotal{background:#f8fafc;color:#334756}
 .shiftSummary .sumScheduled{background:#e8f2fb;color:#285f86;border-color:#bfd6e8}
 .shiftSummary .sumAtWork{background:#fff1cc;color:#855900;border-color:#f0d690}
@@ -378,7 +380,7 @@ let INPUT_MODE='';
 let pendingModePage='';
 let html5Qr=null, cameraRunning=false, HW_BUFFER='', HW_TIMER=null, HW_LAST_KEY=0, queueBusy=false, noticeSeq=0, toastSeq=0, queueRetryTimer=null, scanToastType='', scanToastSource='', persistentScanError=null;
 let lastScanValue='', lastScanAt=0, CAMERA_LAST_RAW='', CAMERA_LAST_SEEN=0, cameraSnapshot=null, cameraSnapshotTimer=null, cameraLatestField='', cameraLookupResult=null, cameraLookupBusy=false, LANG=localStorage.getItem('fleetLang')||'en';
-let stillOutRows=[], historyRows=[], changeRows=[], masterParkingPlaces=[], dashboardData=null, shiftRows=[], shiftSelectedDate='', shiftLoadedAt=0, shiftRefreshPromise=null, shiftRequestSeq=0, shiftDateCache=Object.create(null);
+let stillOutRows=[], historyRows=[], changeRows=[], masterParkingPlaces=[], dashboardData=null, shiftRows=[], shiftSelectedDate='', shiftLoadedAt=0, shiftRefreshPromise=null, shiftRequestSeq=0, shiftDateCache=Object.create(null), shiftStatusFilter='ALL';
 const SHIFT_CACHE_FRESH_MS=10*1000;
 const NAV_STATE_KEY='fleetNavStateV2',SHIFT_SESSION_CACHE_KEY='fleetShiftSessionCacheV1';
 let jobReturnPage='home';
@@ -941,18 +943,27 @@ async function loadShiftDate(forceImport=false,quiet=false,bypassCache=false){
 }
 
 function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'ZUGEWIESEN':'ASSIGNED'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
+function setShiftStatusFilter(status){
+  shiftStatusFilter=String(status||'ALL').toUpperCase();
+  renderShifts();
+}
 function renderShifts(){
   const q=($('shiftSearch')?.value||'').trim().toLowerCase();
-  const rows=(shiftRows||[]).filter(r=>!q||[r.driver,r.driverId,r.driverNameFleet,r.shiftText,r.car,r.scanner,r.status].join(' ').toLowerCase().includes(q));
+  const rows=(shiftRows||[]).filter(r=>{
+    const status=String(r.status||'SCHEDULED').toUpperCase();
+    const statusOk=shiftStatusFilter==='ALL'||status===shiftStatusFilter;
+    const searchOk=!q||[r.driver,r.driverId,r.driverNameFleet,r.shiftText,r.car,r.scanner,r.status].join(' ').toLowerCase().includes(q);
+    return statusOk&&searchOk;
+  });
   const counts={SCHEDULED:0,AT_WORK:0,COMPLETED:0,ABSENT:0,UNMATCHED:0};
   (shiftRows||[]).forEach(r=>{const k=String(r.status||'SCHEDULED').toUpperCase();counts[k]=(counts[k]||0)+1});
   const sm=$('shiftSummary');
-  if(sm)sm.innerHTML='<span class="sumPill sumTotal">'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span>'+
-    '<span class="sumPill sumScheduled">'+(LANG==='de'?'Geplant ':'Scheduled ')+counts.SCHEDULED+'</span>'+
-    '<span class="sumPill sumAtWork">'+(LANG==='de'?'Zugewiesen ':'Assigned ')+counts.AT_WORK+'</span>'+
-    '<span class="sumPill sumCompleted">'+(LANG==='de'?'Abgeschlossen ':'Completed ')+counts.COMPLETED+'</span>'+
-    '<span class="sumPill sumAbsent">'+(LANG==='de'?'Nicht erschienen ':'Absent ')+counts.ABSENT+'</span>'+
-    (counts.UNMATCHED?'<span class="sumPill sumUnmatched">'+(LANG==='de'?'Nicht zugeordnet ':'Unmatched ')+counts.UNMATCHED+'</span>':'');
+  if(sm)sm.innerHTML='<button type="button" class="sumPill sumTotal '+(shiftStatusFilter==='ALL'?'active':'')+'" onclick="setShiftStatusFilter(\'ALL\')">'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</button>'+
+    '<button type="button" class="sumPill sumScheduled '+(shiftStatusFilter==='SCHEDULED'?'active':'')+'" onclick="setShiftStatusFilter(\'SCHEDULED\')">'+(LANG==='de'?'Geplant ':'Scheduled ')+counts.SCHEDULED+'</button>'+
+    '<button type="button" class="sumPill sumAtWork '+(shiftStatusFilter==='AT_WORK'?'active':'')+'" onclick="setShiftStatusFilter(\'AT_WORK\')">'+(LANG==='de'?'Zugewiesen ':'Assigned ')+counts.AT_WORK+'</button>'+
+    '<button type="button" class="sumPill sumCompleted '+(shiftStatusFilter==='COMPLETED'?'active':'')+'" onclick="setShiftStatusFilter(\'COMPLETED\')">'+(LANG==='de'?'Abgeschlossen ':'Completed ')+counts.COMPLETED+'</button>'+
+    '<button type="button" class="sumPill sumAbsent '+(shiftStatusFilter==='ABSENT'?'active':'')+'" onclick="setShiftStatusFilter(\'ABSENT\')">'+(LANG==='de'?'Nicht erschienen ':'Absent ')+counts.ABSENT+'</button>'+
+    (counts.UNMATCHED?'<button type="button" class="sumPill sumUnmatched '+(shiftStatusFilter==='UNMATCHED'?'active':'')+'" onclick="setShiftStatusFilter(\'UNMATCHED\')">'+(LANG==='de'?'Nicht zugeordnet ':'Unmatched ')+counts.UNMATCHED+'</button>':'');
   const dateLabel=shiftSelectedDate?displayDateTimeFromParts(shiftSelectedDate,''):'';
   if(!rows.length){$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b></div><div class="muted">'+esc(LANG==='de'?'Keine importierten Schichten für diesen Tag.':'No imported shifts for this day.')+'</div>';return}
 
