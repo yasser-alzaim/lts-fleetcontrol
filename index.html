@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
-<title>LTS FleetControl FAST V5.0</title>
-<meta name="fleetcontrol-version" content="FAST V5.0">
+<title>LTS FleetControl V5.0</title>
+<meta name="fleetcontrol-version" content="V5.0">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -134,7 +134,13 @@ html.restoringSession .restoreScreen{display:flex}
 .shiftToolbarActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
 .shiftToolbarActions button{width:100%}
 .shiftSummary{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 11px}
-.shiftSummary span{border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#f8fafc;font-size:11px;font-weight:900}
+.shiftSummary .sumPill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;background:#f8fafc}
+.shiftSummary .sumTotal{background:#f8fafc;color:#334756}
+.shiftSummary .sumScheduled{background:#e8f2fb;color:#285f86;border-color:#bfd6e8}
+.shiftSummary .sumAtWork{background:#fff1cc;color:#855900;border-color:#f0d690}
+.shiftSummary .sumCompleted{background:#e5f6eb;color:#187443;border-color:#bfe2ca}
+.shiftSummary .sumAbsent{background:#ffe8e6;color:#a72a21;border-color:#efc0bb}
+.shiftSummary .sumUnmatched{background:#fff0d9;color:#9a5c00;border-color:#f0d2a1}
 .shiftDayTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0 10px;padding:9px 10px;background:#f7fafc;border:1px solid var(--line);border-radius:10px}
 .shiftState{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
 .shiftState.scheduled{background:#e8f2fb;color:#285f86}.shiftState.atwork{background:#fff1cc;color:#855900}.shiftState.completed{background:#e5f6eb;color:#187443}.shiftState.absent{background:#ffe8e6;color:#a72a21}.shiftState.unmatched{background:#fff0d9;color:#9a5c00}
@@ -151,7 +157,7 @@ html.restoringSession .restoreScreen{display:flex}
   .shiftToolbar .shiftToday,.shiftToolbar .shiftRefresh{min-height:42px;font-size:10px;padding:7px 6px;width:100%}
   #pageShifts .searchbar input{min-height:42px}
   .shiftDesktop{display:none!important}.shiftCards{display:block!important}
-  .shiftDayTitle{padding:8px;margin:6px 0}.shiftDayTitle b{font-size:12px}.shiftSummary{gap:4px}.shiftSummary span{font-size:9px;padding:5px 7px}
+  .shiftDayTitle{padding:8px;margin:6px 0}.shiftDayTitle b{font-size:12px}.shiftSummary{gap:4px}.shiftSummary .sumPill{font-size:9px;padding:5px 7px}
   .shiftCardGrid{grid-template-columns:1fr 1fr}.shiftCard{padding:10px;margin:7px 0}.shiftCardName{font-size:14px}
 }
 
@@ -202,7 +208,7 @@ html.restoringSession .restoreScreen{display:flex}
 
     <section id="pageHome" class="page">
       <div class="headline">
-        <div><h1 data-en="Operations Center" data-de="Betriebszentrale">Betriebszentrale</h1><p data-en="Vehicles, scanners and shifts at a glance." data-de="Fahrzeuge, Scanner und Schichten auf einen Blick.">Fahrzeuge, Scanner und Schichten auf einen Blick.</p></div><span id="today" class="todayChip"></span>
+        <div><h1 data-en="Operations Center" data-de="Betriebszentrale">Betriebszentrale</h1></div><span id="today" class="todayChip"></span>
       </div>
       <div class="actionRail">
         <button class="actionCard start" onclick="openJob('start')"><div class="actionIcon">▶</div><strong data-i18n="start">START</strong><small data-en="Assign driver, vehicle and scanner" data-de="Fahrer, Fahrzeug und Scanner zuweisen">Fahrer, Fahrzeug und Scanner zuweisen</small></button>
@@ -941,7 +947,12 @@ function renderShifts(){
   const counts={SCHEDULED:0,AT_WORK:0,COMPLETED:0,ABSENT:0,UNMATCHED:0};
   (shiftRows||[]).forEach(r=>{const k=String(r.status||'SCHEDULED').toUpperCase();counts[k]=(counts[k]||0)+1});
   const sm=$('shiftSummary');
-  if(sm)sm.innerHTML='<span>'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span><span>🔵 '+counts.SCHEDULED+'</span><span>🟨 '+counts.AT_WORK+'</span><span>🟩 '+counts.COMPLETED+'</span><span>🟥 '+counts.ABSENT+'</span>'+(counts.UNMATCHED?'<span>🟧 '+counts.UNMATCHED+'</span>':'');
+  if(sm)sm.innerHTML='<span class="sumPill sumTotal">'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span>'+
+    '<span class="sumPill sumScheduled">'+(LANG==='de'?'Geplant ':'Scheduled ')+counts.SCHEDULED+'</span>'+
+    '<span class="sumPill sumAtWork">'+(LANG==='de'?'Zugewiesen ':'Assigned ')+counts.AT_WORK+'</span>'+
+    '<span class="sumPill sumCompleted">'+(LANG==='de'?'Abgeschlossen ':'Completed ')+counts.COMPLETED+'</span>'+
+    '<span class="sumPill sumAbsent">'+(LANG==='de'?'Nicht erschienen ':'Absent ')+counts.ABSENT+'</span>'+
+    (counts.UNMATCHED?'<span class="sumPill sumUnmatched">'+(LANG==='de'?'Nicht zugeordnet ':'Unmatched ')+counts.UNMATCHED+'</span>':'');
   const dateLabel=shiftSelectedDate?displayDateTimeFromParts(shiftSelectedDate,''):'';
   if(!rows.length){$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b></div><div class="muted">'+esc(LANG==='de'?'Keine importierten Schichten für diesen Tag.':'No imported shifts for this day.')+'</div>';return}
 
