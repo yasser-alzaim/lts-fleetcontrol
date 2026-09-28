@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
-<title>LTS FleetControl V4.5</title>
-<meta name="fleetcontrol-version" content="FAST V4.5">
+<title>LTS FleetControl FAST V4.6</title>
+<meta name="fleetcontrol-version" content="FAST V4.6">
+<script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{
@@ -119,9 +120,43 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
   .operationCard{grid-template-columns:34px minmax(0,1fr);padding:9px 8px;gap:8px;align-items:start}.opFlowIcon{width:32px;height:32px;border-radius:8px;font-size:16px}.operationCard .adminActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}.operationCard .adminActions button,.assignmentCard .adminActions button{min-height:44px!important;font-size:12px!important;padding:10px 12px!important;width:100%}.assignmentCard .adminActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;margin-top:12px!important}
 }
 
+
+/* FAST V4.6: login feedback + attendance */
+html.restoringSession #loginCard{display:none!important}
+.restoreScreen{display:none;min-height:70dvh;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--navy);font-weight:900}
+html.restoringSession .restoreScreen{display:flex}
+.uiSpinner{display:inline-block;width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:fcSpin .7s linear infinite;vertical-align:-4px;margin-right:8px}
+@keyframes fcSpin{to{transform:rotate(360deg)}}
+#loginBtn.loginBusy{opacity:.82;cursor:wait}
+.shiftToolbar{display:grid;grid-template-columns:auto minmax(150px,220px) auto auto 1fr;gap:8px;align-items:center;margin-bottom:10px}
+.shiftToolbar button{border:1px solid var(--line);background:#f7fafc;color:#385367;border-radius:9px;min-height:42px;padding:8px 11px;font-weight:900}
+.shiftToolbar input[type=date]{margin:0;min-height:42px}
+.shiftSummary{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 11px}
+.shiftSummary span{border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#f8fafc;font-size:11px;font-weight:900}
+.shiftDayTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0 10px;padding:9px 10px;background:#f7fafc;border:1px solid var(--line);border-radius:10px}
+.shiftState{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+.shiftState.scheduled{background:#e8f2fb;color:#285f86}.shiftState.atwork{background:#fff1cc;color:#855900}.shiftState.completed{background:#e5f6eb;color:#187443}.shiftState.absent{background:#ffe8e6;color:#a72a21}.shiftState.unmatched{background:#fff0d9;color:#9a5c00}
+.shiftRow.atwork{background:#fffaf0}.shiftRow.completed{background:#f4fbf6}.shiftRow.absent{background:#fff6f5}.shiftRow.unmatched{background:#fffaf1}
+.shiftCards{display:none}.shiftCard{border:1px solid var(--line);border-radius:13px;padding:11px;margin:8px 0;background:#fff;box-shadow:0 4px 14px rgba(24,42,58,.05)}
+.shiftCardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.shiftCardName{font-size:15px;font-weight:900}.shiftCardTime{font-size:12px;color:var(--muted);font-weight:850;margin-top:2px}.shiftCardGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.shiftCardGrid div{background:#f8fafc;border-radius:8px;padding:7px;min-width:0}.shiftCardGrid small{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase}.shiftCardGrid b{display:block;margin-top:2px;font-size:12px;overflow-wrap:anywhere}.shiftCard .miniBtn{width:100%;margin-top:9px;min-height:42px}
+@media(max-width:760px){
+  #pageShifts{padding:8px!important}
+  #pageShifts .panelHead h2{font-size:17px!important}
+  .shiftToolbar{grid-template-columns:42px minmax(0,1fr) 42px;gap:5px;position:sticky;top:54px;z-index:5;background:#fff;padding:5px 0}
+  .shiftToolbar .shiftToday,.shiftToolbar .shiftRefresh{grid-column:auto;min-height:38px;font-size:10px;padding:6px}
+  .shiftToolbar .shiftToday{grid-column:1/3}.shiftToolbar .shiftRefresh{grid-column:3/4}
+  .shiftToolbar input[type=date]{min-width:0;width:100%;font-size:14px;padding:5px}
+  #pageShifts .searchbar input{min-height:42px}
+  .shiftDesktop{display:none!important}.shiftCards{display:block!important}
+  .shiftDayTitle{padding:8px;margin:6px 0}.shiftDayTitle b{font-size:12px}.shiftSummary{gap:4px}.shiftSummary span{font-size:9px;padding:5px 7px}
+  .shiftCardGrid{grid-template-columns:1fr 1fr}.shiftCard{padding:10px;margin:7px 0}.shiftCardName{font-size:14px}
+}
+
 </style>
 </head>
 <body>
+
+<div id="restoreScreen" class="restoreScreen"><span class="uiSpinner"></span><div id="restoreText">Restoring session…</div></div>
 
 <div class="shell">
   <div id="loginCard">
@@ -131,7 +166,7 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
     <div id="serverState" class="muted">Checking backend…</div>
     <input id="loginUser" autocomplete="username" autocapitalize="none" data-ph="username">
     <input id="loginPass" type="password" autocomplete="current-password" data-ph="password">
-    <button id="loginBtn" onclick="signIn()" data-i18n="signIn">SIGN IN</button>
+    <button id="loginBtn" onclick="signIn()"><span id="loginBtnSpinner" class="uiSpinner hidden"></span><span id="loginBtnText">SIGN IN</span></button>
     <div id="loginMsg"></div>
   </div>
 
@@ -141,7 +176,7 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
       <button id="mobileMenuBtn" class="mobileMenuBtn" type="button" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
       <nav class="topNav">
         <button onclick="showPage('home');refreshDashboard()" data-en="OVERVIEW" data-de="ÜBERSICHT">ÜBERSICHT</button>
-        <button onclick="showPage('shifts');loadShifts(7)" data-en="SHIFTS" data-de="SCHICHTEN">SCHICHTEN</button>
+        <button onclick="openShifts()" data-en="SHIFTS" data-de="SCHICHTEN">SCHICHTEN</button>
         <button onclick="openLookup()" data-i18n="lookup">SUCHEN</button>
         <button onclick="showPage('history');loadHistory()" data-i18n="history">VERLAUF</button>
         <button onclick="showPage('changes');loadChanges()" data-i18n="changes">ÄNDERUNGEN</button>
@@ -196,13 +231,15 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
     </section>
 
     <section id="pageShifts" class="page panel hidden">
-      <div class="panelHead"><h2 data-en="Next shifts" data-de="Nächste Schichten">Nächste Schichten</h2></div>
-      <div class="filterBar">
-        <button data-shift-days="1" onclick="setShiftFilter(1)" data-en="TODAY" data-de="HEUTE">HEUTE</button>
-        <button data-shift-days="-1" onclick="setShiftFilter(-1)" data-en="TOMORROW" data-de="MORGEN">MORGEN</button>
-        <button class="active" data-shift-days="3" onclick="setShiftFilter(3)" data-en="NEXT 3 DAYS" data-de="NÄCHSTE 3 TAGE">NÄCHSTE 3 TAGE</button>
-        <button data-shift-days="7" onclick="setShiftFilter(7)" data-en="NEXT 7 DAYS" data-de="NÄCHSTE 7 TAGE">NÄCHSTE 7 TAGE</button>
+      <div class="panelHead"><h2 data-en="Shifts & Attendance" data-de="Schichten & Anwesenheit">Schichten & Anwesenheit</h2></div>
+      <div class="shiftToolbar">
+        <button type="button" onclick="changeShiftDay(-1)" aria-label="Previous day">‹</button>
+        <input id="shiftDate" type="date" onchange="selectShiftDate(this.value)">
+        <button type="button" onclick="changeShiftDay(1)" aria-label="Next day">›</button>
+        <button type="button" class="shiftToday" onclick="selectShiftDate(localTodayIso())" data-en="TODAY" data-de="HEUTE">HEUTE</button>
+        <button type="button" class="shiftRefresh" onclick="loadShiftDate(true)" data-en="READ TP AGAIN" data-de="TP NEU EINLESEN">TP NEU EINLESEN</button>
       </div>
+      <div id="shiftSummary" class="shiftSummary"></div>
       <div class="searchbar"><input id="shiftSearch" oninput="renderShifts()" data-ph="driverName" placeholder="Fahrer suchen"></div>
       <div id="shiftsList"></div>
     </section>
@@ -277,7 +314,7 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
     <aside id="mobileDrawer" class="mobileDrawer" aria-hidden="true">
       <div class="mobileDrawerHead"><b data-en="Navigation" data-de="Navigation">Navigation</b><button type="button" onclick="closeMobileMenu()">✕</button></div>
       <button onclick="closeMobileMenu();showPage('home');refreshDashboard()" data-en="OVERVIEW" data-de="ÜBERSICHT">ÜBERSICHT</button>
-      <button onclick="closeMobileMenu();showPage('shifts');loadShifts(7)" data-en="SHIFTS" data-de="SCHICHTEN">SCHICHTEN</button>
+      <button onclick="closeMobileMenu();openShifts()" data-en="SHIFTS" data-de="SCHICHTEN">SCHICHTEN</button>
       <button onclick="closeMobileMenu();openLookup()" data-i18n="lookup">SUCHEN</button>
       <button onclick="closeMobileMenu();showPage('history');loadHistory()" data-i18n="history">VERLAUF</button>
       <button onclick="closeMobileMenu();showPage('changes');loadChanges()" data-i18n="changes">ÄNDERUNGEN</button>
@@ -327,7 +364,7 @@ let INPUT_MODE='';
 let pendingModePage='';
 let html5Qr=null, cameraRunning=false, HW_BUFFER='', HW_TIMER=null, HW_LAST_KEY=0, queueBusy=false, noticeSeq=0, toastSeq=0, queueRetryTimer=null, scanToastType='', scanToastSource='', persistentScanError=null;
 let lastScanValue='', lastScanAt=0, CAMERA_LAST_RAW='', CAMERA_LAST_SEEN=0, cameraSnapshot=null, cameraSnapshotTimer=null, cameraLatestField='', cameraLookupResult=null, cameraLookupBusy=false, LANG=localStorage.getItem('fleetLang')||'en';
-let stillOutRows=[], historyRows=[], changeRows=[], masterParkingPlaces=[], dashboardData=null, shiftRows=[], shiftFilterDays=3;
+let stillOutRows=[], historyRows=[], changeRows=[], masterParkingPlaces=[], dashboardData=null, shiftRows=[], shiftSelectedDate='', shiftLoadedAt=0, shiftRefreshPromise=null;
 let activeBaseRows=[], activeIndex={driver:new Map(),car:new Map(),scanner:new Map()}, masterIndex={driver:new Map(),car:new Map(),scanner:new Map()}, lastLookupValue='';
 let activeLoadedAt=0, masterLoadedAt=0, activeRefreshPromise=null, masterRefreshPromise=null, validationTimer=null, validationStatusTimer=null, transactionConfirmBusy=false, lastActivityPing=0;
 let assignmentCache=new Map(), dashboardLoadedAt=0, dashboardRefreshPromise=null, dashboardRefreshTimer=null;
@@ -338,7 +375,7 @@ const flows={start:blankFlow(),return:blankFlow()};
 const replacements={replaceScanner:{first:'',second:'',method:''},replaceCar:{first:'',second:'',method:''}};
 let saveQueue=[], failedJobs=[], recoveryState=null, recoveryPage='';
 let syncPending=0, syncState='idle', syncTimer=null;
-const MUTATION_ACTIONS=new Set(['startShift','returnShift','replaceScannerAuto','replaceCarAuto','updateAssignment','deleteAssignment','createUser','updateUser','resetUserPassword','setUserActive','upsertDriver','upsertCar','upsertScanner','upsertParkingPlace','saveFleetSettings','changeMyPassword']);
+const MUTATION_ACTIONS=new Set(['startShift','returnShift','replaceScannerAuto','replaceCarAuto','updateAssignment','deleteAssignment','createUser','updateUser','resetUserPassword','setUserActive','upsertDriver','upsertCar','upsertScanner','upsertParkingPlace','saveFleetSettings','changeMyPassword','importShiftDate']);
 
 const I18N={
 en:{loginTitle:'LTS FleetControl Login',brandSub:'Driver • Vehicle • Scanner Management',username:'Username',password:'Password',signIn:'SIGN IN',logout:'LOG OUT',started:'Started',returned:'Returned',stillOut:'STILL OUT',start:'START',return:'RETURN',replaceScanner:'CHANGE SCANNER',replaceCar:'CHANGE VEHICLE',lookup:'LOOKUP',history:'HISTORY',changes:'CHANGES',users:'USERS',masterData:'MASTER DATA',passwordNav:'PASSWORD',startShift:'Start Shift',driver:'DRIVER',car:'VEHICLE',scanner:'SCANNER',useManual:'USE MANUAL',clear:'CLEAR',returnTitle:'Return',reasonBattery:'Battery',reasonDefective:'Defective',reasonNotScanning:'Not scanning',reasonMaintenance:'Maintenance',reasonOther:'Other',reasonDamage:'Damage',cancel:'CANCEL',back:'BACK',done:'DONE',waiting:'Waiting…',today:'Today',assignedBy:'Assigned By',returnedBy:'Returned By',status:'Status',oldItem:'Old Item',newItem:'New Item',reason:'Reason',changedBy:'Changed By',time:'Time',assignment:'Active Assignment',saving:'Saving…',saved:'Saved',noActive:'No active assignments.',createUser:'CREATE USER',displayName:'Display name',tempPassword:'Temporary password',driverId:'Driver ID',driverName:'Driver name',plate:'Plate',scannerId:'Scanner ID',saveDriver:'SAVE DRIVER',saveCar:'SAVE CAR',saveScanner:'SAVE SCANNER',changePassword:'Change My Password',currentPassword:'Current password',newPassword:'New password',changePasswordBtn:'CHANGE PASSWORD',manualDriver:'Manual Driver ID',manualCar:'Manual Vehicle',manualScanner:'Manual Scanner',lookupManual:'Driver, vehicle or scanner barcode',inputMode:'INPUT MODE',modeScanner:'SCANNER',modeCamera:'CAMERA',modeManual:'MANUAL',anyOrder3:'Scan Driver / Vehicle / Scanner in any order.',replaceScannerAny:'Scan the two scanners in any order. FleetControl identifies the currently assigned scanner automatically.',replaceCarAny:'Scan the two vehicles in any order. FleetControl identifies the currently assigned vehicle automatically.',chooseReason:'Choose reason…',useManualValues:'USE MANUAL VALUES',failedJobs:'FAILED TRANSACTIONS',failedHelp:'Rare background-save failures stay here until you edit, retry or discard them.',edit:'EDIT',retry:'RETRY',discard:'DISCARD',parkingPlaces:'Parking Places',parkingPlaceName:'Parking place name',saveParkingPlace:'SAVE PARKING PLACE',parkingPlace:'Parking place',fuelPercent:'Fuel remaining',rangeKm:'Remaining range',reviewConfirm:'REVIEW & CONFIRM',confirm:'CONFIRM',carTypeChoose:'Keep existing / choose type…',liveCheck:'LIVE CHECK',chooseInputMode:'Choose input mode',modeHelp:'How do you want to enter the data?',searchAction:'SEARCH',search:'Search',loading:'Loading…',day:'Day',type:'Type',user:'User',name:'Name',role:'Role',actions:'Actions',activate:'Activate',deactivate:'Deactivate',drivers:'Drivers',cars:'Cars',scanners:'Scanners',parking:'Parking',fuelRange:'Fuel / Range',lastReturn:'Last Return',assignmentHistory:'Assignment history',noAssignmentHistory:'No assignment history found.',startLabel:'Start',returnLabel:'Return',vehicleChanged:'Vehicle changed',scannerChanged:'Scanner changed',creatingUser:'Creating user',activating:'Activating',deactivating:'Deactivating',userActivated:'User activated',userDeactivated:'User deactivated',tpSpreadsheetId:'TP Spreadsheet ID',editUser:'EDIT',editAssignment:'EDIT ASSIGNMENT',deleteAssignment:'DELETE',saveChanges:'SAVE CHANGES',assignmentNotFound:'Assignment not found',currentOperation:'Current operation',synced:'Synced',syncError:'Sync error',startDate:'Start date',returnDate:'Return date'},
@@ -463,12 +500,12 @@ function recentButtonForApi(){return recentClickedButton&&performance.now()-rece
 function rememberDashboardSnapshot(r){try{sessionStorage.setItem('fleetDashboardSnapshot',JSON.stringify({at:Date.now(),data:r}))}catch(e){}}
 function restoreDashboardSnapshot(){try{const x=JSON.parse(sessionStorage.getItem('fleetDashboardSnapshot')||'null');if(x&&x.data&&Date.now()-Number(x.at||0)<10*60*1000){dashboardData=x.data;dashboardLoadedAt=Number(x.at||0);renderDashboard(dashboardData);return true}}catch(e){}return false}
 function renderDashboardSkeleton(){if(dashboardData)return;const box=$('homeOperations');if(box)box.innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>'}
-function scheduleDataRefresh(delay=650){clearTimeout(dashboardRefreshTimer);dashboardRefreshTimer=setTimeout(()=>{refreshDashboard(true);if(JOB_PAGES.includes(currentPage)||currentPage==='lookup')refreshActiveAssignments(true)},delay)}
+function scheduleDataRefresh(delay=650){clearTimeout(dashboardRefreshTimer);dashboardRefreshTimer=setTimeout(()=>{refreshDashboard(true);if(JOB_PAGES.includes(currentPage)||currentPage==='lookup')refreshActiveAssignments(true);if(currentPage==='shifts')loadShiftDate(false,true)},delay)}
 function optimisticAssignmentUpdate(a){if(!a||!a.assignmentId)return;cacheAssignments([a]);historyRows=historyRows.map(x=>String(x.assignmentId)===String(a.assignmentId)?Object.assign({},x,a):x);if(dashboardData){let active=Array.isArray(dashboardData.activeAssignments)?dashboardData.activeAssignments.slice():[];active=active.filter(x=>String(x.assignmentId)!==String(a.assignmentId));if(String(a.status).toUpperCase()!=='RETURNED')active.unshift(a);dashboardData.activeAssignments=active.slice(0,20);let recent=Array.isArray(dashboardData.recentActivity)?dashboardData.recentActivity.slice():[];recent=recent.filter(x=>!(String(x.assignmentId)===String(a.assignmentId)&&['START','RETURN'].includes(String(x.type||'').toUpperCase())));if(String(a.status).toUpperCase()==='RETURNED')recent.unshift(Object.assign({},a,{type:'RETURN',time:a.returnTime||displayDateTimeFromParts(a.returnDate,a.returnClock)}));else recent.unshift(Object.assign({},a,{type:'START',time:a.start||displayDateTimeFromParts(a.startDate,a.startTime)}));dashboardData.recentActivity=recent.slice(0,14);dashboardData.out=active.length;dashboardData.vehiclesInUse=new Set(active.map(x=>plateKey(x.car))).size;dashboardData.scannersInUse=new Set(active.map(x=>keyOf(x.scanner))).size;renderDashboard(dashboardData);rememberDashboardSnapshot(dashboardData)}if(currentPage==='history'&&historyRows.length)renderHistory();setActiveBase((activeBaseRows||[]).filter(x=>String(x.assignmentId)!==String(a.assignmentId)).concat(String(a.status).toUpperCase()==='RETURNED'?[]:[a]))}
 function optimisticAssignmentDelete(id){id=String(id||'');forgetAssignment(id);historyRows=historyRows.filter(x=>String(x.assignmentId)!==id);activeBaseRows=activeBaseRows.filter(x=>String(x.assignmentId)!==id);rebuildValidationIndex();if(dashboardData){dashboardData.activeAssignments=(dashboardData.activeAssignments||[]).filter(x=>String(x.assignmentId)!==id);dashboardData.recentActivity=(dashboardData.recentActivity||[]).filter(x=>String(x.assignmentId)!==id);dashboardData.out=dashboardData.activeAssignments.length;renderDashboard(dashboardData);rememberDashboardSnapshot(dashboardData)}if(currentPage==='history')renderHistory()}
 
 function setLang(v){LANG=v;localStorage.setItem('fleetLang',v);applyLanguage();updateConnection();renderSyncIndicator()}
-function applyLanguage(){document.documentElement.lang=LANG;if($('mobileMenuBtn'))$('mobileMenuBtn').setAttribute('aria-label',LANG==='de'?'Menü':'Menu');document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.dataset.i18n;if(t(k))el.textContent=t(k)});document.querySelectorAll('[data-ph]').forEach(el=>el.placeholder=t(el.dataset.ph));document.querySelectorAll('[data-en][data-de]').forEach(el=>{el.textContent=LANG==='de'?el.dataset.de:el.dataset.en});['langEn','langEnLogin'].forEach(id=>$(id)?.classList.toggle('active',LANG==='en'));['langDe','langDeLogin'].forEach(id=>$(id)?.classList.toggle('active',LANG==='de'));renderMode();renderFlow('start');renderFlow('return');renderReplacement('replaceScanner');renderReplacement('replaceCar');renderFailedJobsPage();updateWorkStatus('start');updateWorkStatus('return');updateWorkStatus('replaceScanner');updateWorkStatus('replaceCar');if(dashboardData)renderDashboard(dashboardData);if(shiftRows.length)renderShifts();if(historyRows.length)renderHistory();if(changeRows.length)renderChanges();if(USER&&$('who')){$('who').textContent=USER.name+' — '+(LANG==='de'&&String(USER.role).toUpperCase()==='USER'?'BENUTZER':USER.role)}if(currentPage==='users'&&USER?.role==='ADMIN')loadUsers();if(currentPage==='master'&&USER?.role==='ADMIN')loadMaster();if(!$('modeChoiceOverlay')?.classList.contains('hidden')){$('modeChoiceTitle').textContent=t('chooseInputMode');$('modeChoiceHelp').textContent=t('modeHelp')}}
+function applyLanguage(){document.documentElement.lang=LANG;if($('loginBtnText')&&!$('loginBtn')?.disabled)$('loginBtnText').textContent=t('signIn');if($('restoreText'))$('restoreText').textContent=LANG==='de'?'Sitzung wird wiederhergestellt…':'Restoring session…';if($('mobileMenuBtn'))$('mobileMenuBtn').setAttribute('aria-label',LANG==='de'?'Menü':'Menu');document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.dataset.i18n;if(t(k))el.textContent=t(k)});document.querySelectorAll('[data-ph]').forEach(el=>el.placeholder=t(el.dataset.ph));document.querySelectorAll('[data-en][data-de]').forEach(el=>{el.textContent=LANG==='de'?el.dataset.de:el.dataset.en});['langEn','langEnLogin'].forEach(id=>$(id)?.classList.toggle('active',LANG==='en'));['langDe','langDeLogin'].forEach(id=>$(id)?.classList.toggle('active',LANG==='de'));renderMode();renderFlow('start');renderFlow('return');renderReplacement('replaceScanner');renderReplacement('replaceCar');renderFailedJobsPage();updateWorkStatus('start');updateWorkStatus('return');updateWorkStatus('replaceScanner');updateWorkStatus('replaceCar');if(dashboardData)renderDashboard(dashboardData);if(shiftRows.length)renderShifts();if(historyRows.length)renderHistory();if(changeRows.length)renderChanges();if(USER&&$('who')){$('who').textContent=USER.name+' — '+(LANG==='de'&&String(USER.role).toUpperCase()==='USER'?'BENUTZER':USER.role)}if(currentPage==='users'&&USER?.role==='ADMIN')loadUsers();if(currentPage==='master'&&USER?.role==='ADMIN')loadMaster();if(!$('modeChoiceOverlay')?.classList.contains('hidden')){$('modeChoiceTitle').textContent=t('chooseInputMode');$('modeChoiceHelp').textContent=t('modeHelp')}}
 
 window.addEventListener('message',event=>{const d=event.data;if(!d||d.fleetQrApi!==true||!d.id)return;const item=pending.get(d.id);if(!item)return;d.ok?item.resolve(d.result):item.reject(new Error(d.error||'Backend error'))});
 function renderSyncIndicator(detail=''){
@@ -633,10 +670,17 @@ function renderCameraQueueLine(){const el=$('cameraQueueLine');if(!el)return;let
 function showQueueDetails(){if(failedJobs.length){showPage('failed');renderFailedJobsPage();return}if(saveQueue.length)showNotice('info',LANG==='de'?'HINTERGRUND-SPEICHERUNG':'BACKGROUND SAVING',(LANG==='de'?'Wartende Vorgänge: ':'Queued jobs: ')+saveQueue.length,900)}
 function showFailedJobs(){showPage('failed');renderFailedJobsPage()}
 
-async function restoreLogin(){if(!TOKEN){showLogin();return}try{const r=await apiCall('resumeSession',[TOKEN]);USER=r.user;localStorage.setItem('fleetUser',JSON.stringify(USER));showApp();processQueue()}catch(e){TOKEN='';USER=null;localStorage.removeItem('fleetToken');localStorage.removeItem('fleetUser');showLogin()}}
+async function restoreLogin(){
+  const finish=()=>{document.documentElement.classList.remove('restoringSession');$('restoreScreen')?.classList.add('hidden')};
+  if(!TOKEN){finish();showLogin();return}
+  try{
+    const r=await apiCall('resumeSession',[TOKEN]);USER=r.user;localStorage.setItem('fleetUser',JSON.stringify(USER));finish();showApp();processQueue()
+  }catch(e){TOKEN='';USER=null;localStorage.removeItem('fleetToken');localStorage.removeItem('fleetUser');finish();showLogin()}
+}
 function showLogin(){$('loginCard').classList.remove('hidden');$('app').classList.add('hidden')}
 function showApp(){$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');const roleLabel=LANG==='de'&&String(USER.role).toUpperCase()==='USER'?'BENUTZER':USER.role;$('who').textContent=USER.name+' — '+roleLabel;const isAdmin=USER.role==='ADMIN';$('usersNav').classList.toggle('hidden',!isAdmin);$('masterNav').classList.toggle('hidden',!isAdmin);$('mobileUsersNav')?.classList.toggle('hidden',!isAdmin);$('mobileMasterNav')?.classList.toggle('hidden',!isAdmin);renderMode();renderFlow('start');renderFlow('return');renderReplacement('replaceScanner');renderReplacement('replaceCar');renderFailedJobsPage();showPage(currentPage&&currentPage!=='start'?currentPage:'home');if(!restoreDashboardSnapshot())renderDashboardSkeleton();refreshDashboard(false);startValidationRefresh();markUserActivity();setTimeout(maybeOfferRecovery,120)}
-async function signIn(){const u=$('loginUser').value.trim(),p=$('loginPass').value;if(!u||!p){$('loginMsg').innerHTML='<span class="err">'+esc(t('username')+' / '+t('password'))+'</span>';return}$('loginBtn').disabled=true;try{const r=await apiCall('login',[u,p]);if(!r.ok)throw new Error(r.error||'Login failed');TOKEN=r.token;USER=r.user;localStorage.setItem('fleetToken',TOKEN);localStorage.setItem('fleetUser',JSON.stringify(USER));$('loginMsg').textContent='';showApp();showNotice('success',LANG==='de'?'ANGEMELDET':'SIGNED IN',USER.name,900);processQueue()}catch(e){$('loginMsg').innerHTML='<span class="err">'+esc(localizeError(e.message||String(e)))+'</span>'}finally{$('loginBtn').disabled=false}}
+function setLoginBusy(busy){const btn=$('loginBtn'),sp=$('loginBtnSpinner'),txt=$('loginBtnText');if(!btn)return;btn.disabled=!!busy;btn.classList.toggle('loginBusy',!!busy);sp?.classList.toggle('hidden',!busy);if(txt)txt.textContent=busy?(LANG==='de'?'ANMELDUNG…':'SIGNING IN…'):t('signIn')}
+async function signIn(){const u=$('loginUser').value.trim(),p=$('loginPass').value;if(!u||!p){$('loginMsg').innerHTML='<span class="err">'+esc(t('username')+' / '+t('password'))+'</span>';return}setLoginBusy(true);$('loginMsg').textContent='';try{const r=await apiCall('login',[u,p]);if(!r.ok)throw new Error(r.error||'Login failed');TOKEN=r.token;USER=r.user;localStorage.setItem('fleetToken',TOKEN);localStorage.setItem('fleetUser',JSON.stringify(USER));showApp();processQueue()}catch(e){$('loginMsg').innerHTML='<span class="err">'+esc(localizeError(e.message||String(e)))+'</span>'}finally{setLoginBusy(false)}}
 function signOut(){if(saveQueue.length&&!confirm(LANG==='de'?'Es warten noch ungespeicherte Vorgänge. Trotzdem abmelden?':'There are unsaved scans waiting. Log out anyway?'))return;stopCamera();apiCall('logout',[TOKEN]).catch(()=>{}).finally(()=>{TOKEN='';USER=null;localStorage.removeItem('fleetToken');localStorage.removeItem('fleetUser');location.reload()})}
 function handleAuthRequired(msg){localStorage.removeItem('fleetToken');TOKEN='';USER=null;stopCamera();showLogin();showNotice('error',LANG==='de'?'ANMELDUNG ERFORDERLICH':'LOGIN REQUIRED',LANG==='de'?'Erfasste Daten bleiben erhalten. Bitte erneut anmelden; FleetControl setzt danach fort.':'Your scanned work is preserved. Sign in again and FleetControl will continue saving it.',0)}
 
@@ -831,16 +875,34 @@ function saveCar(){const p=$('cPlate').value,a=$('cActive').value==='true',type=
 function saveScanner(){const id=$('sId').value,a=$('sActive').value==='true';server('upsertScanner',[TOKEN,id,a],()=>{$('sId').value='';loadMaster();refreshMasterData(true);showNotice('success',LANG==='de'?'✓ SCANNER GESPEICHERT':'✓ SCANNER SAVED',id,1250)},m=>showNotice('error',LANG==='de'?'SCANNER NICHT GESPEICHERT':'SCANNER NOT SAVED',m,0)).catch(()=>{})}
 function saveParkingPlace(){const name=$('pName').value.trim(),a=$('pActive').value==='true';if(!name){showNotice('error',LANG==='de'?'PARKPLATZ':'PARKING PLACE',LANG==='de'?'Name eingeben.':'Enter a name.',0);return}server('upsertParkingPlace',[TOKEN,name,a],()=>{$('pName').value='';loadMaster();refreshMasterData(true);showNotice('success',LANG==='de'?'✓ PARKPLATZ GESPEICHERT':'✓ PARKING PLACE SAVED',name,1250)},m=>showNotice('error',LANG==='de'?'PARKPLATZ NICHT GESPEICHERT':'PARKING PLACE NOT SAVED',m,0)).catch(()=>{})}
 function saveFleetSettingsUI(){const tp=$('tpSpreadsheetId').value.trim();server('saveFleetSettings',[TOKEN,{tpSpreadsheetId:tp}],()=>showNotice('success',LANG==='de'?'✓ EINSTELLUNGEN GESPEICHERT':'✓ SETTINGS SAVED',tp||'—',1200),m=>showNotice('error',LANG==='de'?'EINSTELLUNGEN':'SETTINGS',m,0)).catch(()=>{})}
-function loadShifts(fetchDays=7){$('shiftsList').innerHTML='<div class="muted">'+esc(t('loading'))+'</div>';apiCall('getUpcomingShifts',[TOKEN,Math.max(Number(fetchDays)||7,7)]).then(rows=>{shiftRows=Array.isArray(rows)?rows:[];renderShifts()}).catch(e=>{$('shiftsList').innerHTML='<div class="err">'+esc(localizeError(e?.message||String(e)))+'</div>';if(isAuthError(e?.message))handleAuthRequired(e.message)})}
-function setShiftFilter(days){shiftFilterDays=days;document.querySelectorAll('[data-shift-days]').forEach(b=>b.classList.toggle('active',Number(b.dataset.shiftDays)===days));renderShifts()}
-function renderShifts(){const q=($('shiftSearch')?.value||'').trim().toLowerCase(),today=new Date();today.setHours(0,0,0,0);let rows=shiftRows.filter(r=>{const d=new Date(r.dateIso+'T00:00:00');if(shiftFilterDays===-1){const tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);return d.getTime()===tomorrow.getTime()}const max=new Date(today);max.setDate(today.getDate()+shiftFilterDays-1);return d>=today&&d<=max});if(q)rows=rows.filter(r=>[r.driver,r.driverId,r.shiftText,r.car,r.scanner].join(' ').toLowerCase().includes(q));$('shiftsList').innerHTML=rows.length?'<div class="tableWrap"><table><tr><th>'+(LANG==='de'?'Datum':'Date')+'</th><th>'+esc(t('time'))+'</th><th>'+esc(t('driver'))+'</th><th>'+(LANG==='de'?'Schicht':'Shift')+'</th><th>'+esc(t('status'))+'</th><th>'+esc(t('car'))+'</th><th>'+esc(t('scanner'))+'</th><th></th></tr>'+rows.map(r=>{const status=r.status==='STARTED'?(LANG==='de'?'Unterwegs':'Out'):r.status==='RETURNED'?(LANG==='de'?'Zurückgegeben':'Returned'):(LANG==='de'?'Nicht gestartet':'Not started');const can=!!r.driverId&&r.driverActive!==false&&r.status==='NOT_STARTED',warn=!r.driverId?'<span class="matchWarn">'+(LANG==='de'?'Fahrer nicht eindeutig zugeordnet':'Driver not uniquely matched')+'</span>':r.driverActive===false?'<span class="matchWarn">'+(LANG==='de'?'Fahrer inaktiv':'Driver inactive')+'</span>':'';return '<tr><td>'+esc(r.date)+'</td><td><b>'+esc(r.start||'—')+'</b>'+(r.end?'–'+esc(r.end):'')+'</td><td><b>'+esc(r.driver)+'</b>'+warn+(r.driverId?'<br><small>'+esc(r.driverId)+'</small>':'')+'</td><td>'+esc(r.shiftText)+'</td><td><span class="opBadge '+(r.status==='STARTED'?'out':r.status==='RETURNED'?'returned':'pending')+'">'+esc(status)+'</span></td><td>'+esc(r.car||'—')+'</td><td>'+esc(r.scanner||'—')+'</td><td>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">START</button>':'')+'</td></tr>'}).join('')+'</table></div>':'<div class="muted">'+(LANG==='de'?'Keine Schichten gefunden.':'No shifts found.')+'</div>'}
+function openShifts(){showPage('shifts');if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();$('shiftDate').value=shiftSelectedDate;if(shiftRows.length&&Date.now()-shiftLoadedAt<60000){renderShifts();loadShiftDate(false,true)}else loadShiftDate(false)}
+function selectShiftDate(iso){if(!iso)return;shiftSelectedDate=iso;$('shiftDate').value=iso;shiftRows=[];shiftLoadedAt=0;loadShiftDate(false)}
+function changeShiftDay(delta){const base=new Date((shiftSelectedDate||localTodayIso())+'T12:00:00');base.setDate(base.getDate()+Number(delta||0));selectShiftDate(base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0'))}
+async function loadShiftDate(force=false,quiet=false){
+  if(!TOKEN)return;if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();$('shiftDate').value=shiftSelectedDate;
+  if(shiftRefreshPromise)return shiftRefreshPromise;
+  if(!quiet&&!shiftRows.length)$('shiftsList').innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>';
+  shiftRefreshPromise=apiCall('importShiftDate',[TOKEN,shiftSelectedDate,!!force]).then(r=>{shiftRows=Array.isArray(r?.rows)?r.rows:[];shiftLoadedAt=Date.now();renderShifts();return r}).catch(e=>{$('shiftsList').innerHTML='<div class="err">'+esc(localizeError(e?.message||String(e)))+'</div>';if(isAuthError(e?.message))handleAuthRequired(e.message);return null}).finally(()=>shiftRefreshPromise=null);
+  return shiftRefreshPromise
+}
+function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'BEI DER ARBEIT':'AT WORK'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
+function renderShifts(){
+  const q=($('shiftSearch')?.value||'').trim().toLowerCase();let rows=(shiftRows||[]).filter(r=>!q||[r.driver,r.driverId,r.driverNameFleet,r.shiftText,r.car,r.scanner,r.status].join(' ').toLowerCase().includes(q));
+  const counts={SCHEDULED:0,AT_WORK:0,COMPLETED:0,ABSENT:0,UNMATCHED:0};(shiftRows||[]).forEach(r=>{const k=String(r.status||'SCHEDULED').toUpperCase();counts[k]=(counts[k]||0)+1});
+  const sm=$('shiftSummary');if(sm)sm.innerHTML='<span>'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span><span>🔵 '+counts.SCHEDULED+'</span><span>🟨 '+counts.AT_WORK+'</span><span>🟩 '+counts.COMPLETED+'</span><span>🟥 '+counts.ABSENT+'</span>'+(counts.UNMATCHED?'<span>🟧 '+counts.UNMATCHED+'</span>':'');
+  const dateLabel=shiftSelectedDate?displayDateTimeFromParts(shiftSelectedDate,''):'';
+  if(!rows.length){$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b></div><div class="muted">'+esc(LANG==='de'?'Keine importierten Schichten für diesen Tag.':'No imported shifts for this day.')+'</div>';return}
+  const desktop='<div class="shiftDesktop tableWrap"><table><tr><th>'+esc(t('time'))+'</th><th>'+esc(t('driver'))+'</th><th>'+(LANG==='de'?'Schicht':'Shift')+'</th><th>'+esc(t('status'))+'</th><th>'+esc(t('car'))+'</th><th>'+esc(t('scanner'))+'</th><th>'+(LANG==='de'?'Ist-Zeit':'Actual')+'</th><th></th></tr>'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&String(r.status).toUpperCase()==='SCHEDULED';return '<tr class="shiftRow '+st.cls+'"><td><b>'+esc(r.start||'—')+'</b>'+(r.end?'–'+esc(r.end):'')+'</td><td><b>'+esc(r.driver)+'</b>'+(r.driverId?'<br><small>'+esc(r.driverId)+'</small>':'')+'</td><td>'+esc(r.shiftText||'—')+'</td><td><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></td><td>'+esc(r.car||'—')+'</td><td>'+esc(r.scanner||'—')+'</td><td>'+esc(r.actualStart||'—')+(r.actualReturn?'<br>→ '+esc(r.actualReturn):'')+'</td><td>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">START</button>':'')+'</td></tr>'}).join('')+'</table></div>';
+  const cards='<div class="shiftCards">'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&String(r.status).toUpperCase()==='SCHEDULED';return '<div class="shiftCard shiftRow '+st.cls+'"><div class="shiftCardHead"><div><div class="shiftCardName">'+esc(r.driver||'—')+'</div><div class="shiftCardTime">'+esc(r.start||'—')+(r.end?' – '+esc(r.end):'')+' · '+esc(r.shiftText||'')+'</div>'+(r.driverId?'<small>'+esc(r.driverId)+'</small>':'')+'</div><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></div><div class="shiftCardGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(r.car||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(r.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(r.actualStart||'—')+'</b></div><div><small>'+esc(t('returnLabel'))+'</small><b>'+esc(r.actualReturn||'—')+'</b></div></div>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">'+(LANG==='de'?'ZUWEISUNG STARTEN':'START ASSIGNMENT')+'</button>':'')+'</div>'}).join('')+'</div>';
+  $('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b><span>'+rows.length+' '+(LANG==='de'?'Schichten':'shifts')+'</span></div>'+desktop+cards
+}
 function startFromShift(driverId){flows.start=blankFlow();flows.start.driver={value:'D:'+driverId,method:'TP'};persistDrafts();openJob('start');renderFlow('start')}
 
 function changePassword(){server('changeMyPassword',[TOKEN,$('oldPassword').value,$('myNewPassword').value],()=>{$('oldPassword').value='';$('myNewPassword').value='';showNotice('success',LANG==='de'?'✓ PASSWORT GEÄNDERT':'✓ PASSWORD CHANGED','',1250)},m=>showNotice('error',LANG==='de'?'PASSWORT NICHT GEÄNDERT':'PASSWORD NOT CHANGED',m,0)).catch(()=>{})}
 
 async function testBackend(){$('serverState').textContent=LANG==='de'?'Backend wird geprüft…':'Checking backend…';try{const r=await apiCall('testConnection',[]);$('serverState').innerHTML='<span class="ok">● '+esc(LANG==='de'?'Verbunden':'Connected')+' — '+esc(r.spreadsheet)+'</span>'}catch(e){$('serverState').innerHTML='<span class="err">● '+esc(localizeError(e.message))+'</span>'}}
 
-document.addEventListener('DOMContentLoaded',()=>{applyLanguage();renderSyncIndicator();loadPersistedState();updateConnection();document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled)return;recentClickedButton=b;recentButtonAt=performance.now();pulseButton(b)},true);['loginUser','loginPass'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')signIn()}));document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('confirmOverlay').classList.contains('hidden'))$('confirmBack')?.click();else if(cameraRunning)finishCameraSession();else if(JOB_PAGES.includes(currentPage))closeJob()}},true);document.addEventListener('keydown',hardwareKeyListener,true);['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,markUserActivity,{passive:true}));testBackend();restoreLogin()});window.addEventListener('resize',()=>{if(INPUT_MODE)normalizeModeForDevice();renderMode()});
+document.addEventListener('DOMContentLoaded',()=>{applyLanguage();renderSyncIndicator();loadPersistedState();updateConnection();document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled)return;recentClickedButton=b;recentButtonAt=performance.now();pulseButton(b)},true);['loginUser','loginPass'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')signIn()}));document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('confirmOverlay').classList.contains('hidden'))$('confirmBack')?.click();else if(cameraRunning)finishCameraSession();else if(JOB_PAGES.includes(currentPage))closeJob()}},true);document.addEventListener('keydown',hardwareKeyListener,true);['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,markUserActivity,{passive:true}));testBackend();restoreLogin()});window.addEventListener('resize',()=>{if(INPUT_MODE)normalizeModeForDevice();renderMode();if(currentPage==='shifts'&&shiftRows.length)renderShifts()});
 </script>
 </body>
 </html>
