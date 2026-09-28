@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
-<title>LTS FleetControl FAST V4.6</title>
-<meta name="fleetcontrol-version" content="FAST V4.6">
+<title>LTS FleetControl FAST V4.7</title>
+<meta name="fleetcontrol-version" content="FAST V4.7">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -121,7 +121,7 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
 }
 
 
-/* FAST V4.6: login feedback + attendance */
+/* FAST V4.7: login feedback + TP plans stored directly in Fleet daily sheets */
 html.restoringSession #loginCard{display:none!important}
 .restoreScreen{display:none;min-height:70dvh;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--navy);font-weight:900}
 html.restoringSession .restoreScreen{display:flex}
@@ -231,7 +231,7 @@ html.restoringSession .restoreScreen{display:flex}
     </section>
 
     <section id="pageShifts" class="page panel hidden">
-      <div class="panelHead"><h2 data-en="Shifts & Attendance" data-de="Schichten & Anwesenheit">Schichten & Anwesenheit</h2></div>
+      <div class="panelHead"><h2 data-en="Shifts" data-de="Schichten">Schichten</h2></div>
       <div class="shiftToolbar">
         <button type="button" onclick="changeShiftDay(-1)" aria-label="Previous day">‹</button>
         <input id="shiftDate" type="date" onchange="selectShiftDate(this.value)">
@@ -882,7 +882,7 @@ async function loadShiftDate(force=false,quiet=false){
   if(!TOKEN)return;if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();$('shiftDate').value=shiftSelectedDate;
   if(shiftRefreshPromise)return shiftRefreshPromise;
   if(!quiet&&!shiftRows.length)$('shiftsList').innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>';
-  shiftRefreshPromise=apiCall('importShiftDate',[TOKEN,shiftSelectedDate,!!force]).then(r=>{shiftRows=Array.isArray(r?.rows)?r.rows:[];shiftLoadedAt=Date.now();renderShifts();return r}).catch(e=>{$('shiftsList').innerHTML='<div class="err">'+esc(localizeError(e?.message||String(e)))+'</div>';if(isAuthError(e?.message))handleAuthRequired(e.message);return null}).finally(()=>shiftRefreshPromise=null);
+  shiftRefreshPromise=apiCall('importShiftDate',[TOKEN,shiftSelectedDate,!!force]).then(r=>{shiftRows=Array.isArray(r?.rows)?r.rows:[];shiftLoadedAt=Date.now();renderShifts();if(!shiftRows.length&&r?.message)$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(displayDateTimeFromParts(shiftSelectedDate,''))+'</b></div><div class="muted">'+esc(r.message)+'</div>';return r}).catch(e=>{$('shiftsList').innerHTML='<div class="err">'+esc(localizeError(e?.message||String(e)))+'</div>';if(isAuthError(e?.message))handleAuthRequired(e.message);return null}).finally(()=>shiftRefreshPromise=null);
   return shiftRefreshPromise
 }
 function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'BEI DER ARBEIT':'AT WORK'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
@@ -892,8 +892,8 @@ function renderShifts(){
   const sm=$('shiftSummary');if(sm)sm.innerHTML='<span>'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span><span>🔵 '+counts.SCHEDULED+'</span><span>🟨 '+counts.AT_WORK+'</span><span>🟩 '+counts.COMPLETED+'</span><span>🟥 '+counts.ABSENT+'</span>'+(counts.UNMATCHED?'<span>🟧 '+counts.UNMATCHED+'</span>':'');
   const dateLabel=shiftSelectedDate?displayDateTimeFromParts(shiftSelectedDate,''):'';
   if(!rows.length){$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b></div><div class="muted">'+esc(LANG==='de'?'Keine importierten Schichten für diesen Tag.':'No imported shifts for this day.')+'</div>';return}
-  const desktop='<div class="shiftDesktop tableWrap"><table><tr><th>'+esc(t('time'))+'</th><th>'+esc(t('driver'))+'</th><th>'+(LANG==='de'?'Schicht':'Shift')+'</th><th>'+esc(t('status'))+'</th><th>'+esc(t('car'))+'</th><th>'+esc(t('scanner'))+'</th><th>'+(LANG==='de'?'Ist-Zeit':'Actual')+'</th><th></th></tr>'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&String(r.status).toUpperCase()==='SCHEDULED';return '<tr class="shiftRow '+st.cls+'"><td><b>'+esc(r.start||'—')+'</b>'+(r.end?'–'+esc(r.end):'')+'</td><td><b>'+esc(r.driver)+'</b>'+(r.driverId?'<br><small>'+esc(r.driverId)+'</small>':'')+'</td><td>'+esc(r.shiftText||'—')+'</td><td><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></td><td>'+esc(r.car||'—')+'</td><td>'+esc(r.scanner||'—')+'</td><td>'+esc(r.actualStart||'—')+(r.actualReturn?'<br>→ '+esc(r.actualReturn):'')+'</td><td>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">START</button>':'')+'</td></tr>'}).join('')+'</table></div>';
-  const cards='<div class="shiftCards">'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&String(r.status).toUpperCase()==='SCHEDULED';return '<div class="shiftCard shiftRow '+st.cls+'"><div class="shiftCardHead"><div><div class="shiftCardName">'+esc(r.driver||'—')+'</div><div class="shiftCardTime">'+esc(r.start||'—')+(r.end?' – '+esc(r.end):'')+' · '+esc(r.shiftText||'')+'</div>'+(r.driverId?'<small>'+esc(r.driverId)+'</small>':'')+'</div><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></div><div class="shiftCardGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(r.car||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(r.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(r.actualStart||'—')+'</b></div><div><small>'+esc(t('returnLabel'))+'</small><b>'+esc(r.actualReturn||'—')+'</b></div></div>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">'+(LANG==='de'?'ZUWEISUNG STARTEN':'START ASSIGNMENT')+'</button>':'')+'</div>'}).join('')+'</div>';
+  const desktop='<div class="shiftDesktop tableWrap"><table><tr><th>'+esc(t('time'))+'</th><th>'+esc(t('driver'))+'</th><th>'+(LANG==='de'?'Schicht':'Shift')+'</th><th>'+esc(t('status'))+'</th><th>'+esc(t('car'))+'</th><th>'+esc(t('scanner'))+'</th><th>'+(LANG==='de'?'Ist-Zeit':'Actual')+'</th><th></th></tr>'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&['SCHEDULED','ABSENT'].includes(String(r.status).toUpperCase());return '<tr class="shiftRow '+st.cls+'"><td><b>'+esc(r.start||'—')+'</b>'+(r.end?'–'+esc(r.end):'')+'</td><td><b>'+esc(r.driver)+'</b>'+(r.driverId?'<br><small>'+esc(r.driverId)+'</small>':'')+'</td><td>'+esc(r.shiftText||'—')+'</td><td><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></td><td>'+esc(r.car||'—')+'</td><td>'+esc(r.scanner||'—')+'</td><td>'+esc(r.actualStart||'—')+(r.actualReturn?'<br>→ '+esc(r.actualReturn):'')+'</td><td>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">START</button>':'')+'</td></tr>'}).join('')+'</table></div>';
+  const cards='<div class="shiftCards">'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&['SCHEDULED','ABSENT'].includes(String(r.status).toUpperCase());return '<div class="shiftCard shiftRow '+st.cls+'"><div class="shiftCardHead"><div><div class="shiftCardName">'+esc(r.driver||'—')+'</div><div class="shiftCardTime">'+esc(r.start||'—')+(r.end?' – '+esc(r.end):'')+' · '+esc(r.shiftText||'')+'</div>'+(r.driverId?'<small>'+esc(r.driverId)+'</small>':'')+'</div><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></div><div class="shiftCardGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(r.car||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(r.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(r.actualStart||'—')+'</b></div><div><small>'+esc(t('returnLabel'))+'</small><b>'+esc(r.actualReturn||'—')+'</b></div></div>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">'+(LANG==='de'?'ZUWEISUNG STARTEN':'START ASSIGNMENT')+'</button>':'')+'</div>'}).join('')+'</div>';
   $('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b><span>'+rows.length+' '+(LANG==='de'?'Schichten':'shifts')+'</span></div>'+desktop+cards
 }
 function startFromShift(driverId){flows.start=blankFlow();flows.start.driver={value:'D:'+driverId,method:'TP'};persistDrafts();openJob('start');renderFlow('start')}
