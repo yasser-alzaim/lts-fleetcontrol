@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="FleetControl">
+
 <title>LTS FleetControl V5.0</title>
 <meta name="fleetcontrol-version" content="V5.0">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
@@ -166,6 +174,10 @@ html.restoringSession .restoreScreen{display:flex}
 
 /* FAST V5.0: large shift days stay cheap on mobile. */
 .shiftCard{content-visibility:auto;contain-intrinsic-size:260px}
+
+#installAppBtn{grid-column:1/-1;background:#e8f3fb!important;color:#0d5e99!important;border-color:#9bc6e4!important}
+#installAppBtn.hidden{display:none!important}
+
 </style>
 </head>
 <body>
@@ -338,7 +350,7 @@ html.restoringSession .restoreScreen{display:flex}
       <button id="mobileUsersNav" class="hidden" onclick="closeMobileMenu();showPage('users');loadUsers()" data-i18n="users">BENUTZER</button>
       <button id="mobileMasterNav" class="hidden" onclick="closeMobileMenu();showPage('master');loadMaster()" data-i18n="masterData">STAMMDATEN</button>
       <button onclick="closeMobileMenu();showPage('password')" data-i18n="passwordNav">PASSWORT</button>
-      <div class="mobileDrawerTools"><button type="button" onclick="setLang('de')">DE</button><button type="button" onclick="setLang('en')">EN</button><button class="drawerLogout" type="button" onclick="closeMobileMenu();signOut()" data-i18n="logout">ABMELDEN</button></div>
+      <div class="mobileDrawerTools"><button id="installAppBtn" class="hidden" type="button" onclick="installFleetApp()">INSTALL APP</button><button type="button" onclick="setLang('de')">DE</button><button type="button" onclick="setLang('en')">EN</button><button class="drawerLogout" type="button" onclick="closeMobileMenu();signOut()" data-i18n="logout">ABMELDEN</button></div>
     </aside>
   </div>
 </div>
@@ -990,5 +1002,40 @@ async function testBackend(){$('serverState').textContent=LANG==='de'?'Backend w
 
 document.addEventListener('DOMContentLoaded',()=>{applyLanguage();renderSyncIndicator();loadPersistedState();loadNavigationState();hydrateShiftSessionCache();updateConnection();document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled)return;recentClickedButton=b;recentButtonAt=performance.now();pulseButton(b)},true);['loginUser','loginPass'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')signIn()}));document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('confirmOverlay').classList.contains('hidden'))$('confirmBack')?.click();else if(cameraRunning)finishCameraSession();else if(JOB_PAGES.includes(currentPage))closeJob()}},true);document.addEventListener('keydown',hardwareKeyListener,true);['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,markUserActivity,{passive:true}));testBackend();restoreLogin()});window.addEventListener('resize',()=>{if(INPUT_MODE)normalizeModeForDevice();renderMode();if(currentPage==='shifts'&&shiftRows.length)renderShifts()});
 </script>
+
+<script>
+let fleetInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  fleetInstallPrompt = event;
+  const btn = document.getElementById('installAppBtn');
+  if (btn) {
+    btn.classList.remove('hidden');
+    btn.textContent = (typeof LANG !== 'undefined' && LANG === 'de') ? 'APP INSTALLIEREN' : 'INSTALL APP';
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  fleetInstallPrompt = null;
+  document.getElementById('installAppBtn')?.classList.add('hidden');
+});
+
+async function installFleetApp() {
+  if (!fleetInstallPrompt) return;
+  fleetInstallPrompt.prompt();
+  try { await fleetInstallPrompt.userChoice; } catch (e) {}
+  fleetInstallPrompt = null;
+  document.getElementById('installAppBtn')?.classList.add('hidden');
+  if (typeof closeMobileMenu === 'function') closeMobileMenu();
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  });
+}
+</script>
+
 </body>
 </html>
