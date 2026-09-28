@@ -934,7 +934,7 @@ async function loadShiftDate(forceImport=false,quiet=false,bypassCache=false){
   return requestPromise
 }
 
-function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'BEI DER ARBEIT':'AT WORK'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
+function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'ZUGEWIESEN':'ASSIGNED'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
 function renderShifts(){
   const q=($('shiftSearch')?.value||'').trim().toLowerCase();
   const rows=(shiftRows||[]).filter(r=>!q||[r.driver,r.driverId,r.driverNameFleet,r.shiftText,r.car,r.scanner,r.status].join(' ').toLowerCase().includes(q));
