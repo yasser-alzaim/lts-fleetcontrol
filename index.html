@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
-<title>LTS FleetControl FAST V4.8</title>
-<meta name="fleetcontrol-version" content="FAST V4.8">
+<title>LTS FleetControl FAST V4.9</title>
+<meta name="fleetcontrol-version" content="FAST V4.9">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -121,7 +121,7 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
 }
 
 
-/* FAST V4.8: TP-order shift blocks + compact responsive shift layout */
+/* FAST V4.9: TP-order shift blocks + compact responsive shift layout */
 html.restoringSession #loginCard{display:none!important}
 .restoreScreen{display:none;min-height:70dvh;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--navy);font-weight:900}
 html.restoringSession .restoreScreen{display:flex}
@@ -155,6 +155,9 @@ html.restoringSession .restoreScreen{display:flex}
   .shiftCardGrid{grid-template-columns:1fr 1fr}.shiftCard{padding:10px;margin:7px 0}.shiftCardName{font-size:14px}
 }
 
+
+/* FAST V4.9: large shift days stay cheap on mobile. */
+.shiftCard{content-visibility:auto;contain-intrinsic-size:260px}
 </style>
 </head>
 <body>
@@ -369,7 +372,8 @@ let INPUT_MODE='';
 let pendingModePage='';
 let html5Qr=null, cameraRunning=false, HW_BUFFER='', HW_TIMER=null, HW_LAST_KEY=0, queueBusy=false, noticeSeq=0, toastSeq=0, queueRetryTimer=null, scanToastType='', scanToastSource='', persistentScanError=null;
 let lastScanValue='', lastScanAt=0, CAMERA_LAST_RAW='', CAMERA_LAST_SEEN=0, cameraSnapshot=null, cameraSnapshotTimer=null, cameraLatestField='', cameraLookupResult=null, cameraLookupBusy=false, LANG=localStorage.getItem('fleetLang')||'en';
-let stillOutRows=[], historyRows=[], changeRows=[], masterParkingPlaces=[], dashboardData=null, shiftRows=[], shiftSelectedDate='', shiftLoadedAt=0, shiftRefreshPromise=null;
+let stillOutRows=[], historyRows=[], changeRows=[], masterParkingPlaces=[], dashboardData=null, shiftRows=[], shiftSelectedDate='', shiftLoadedAt=0, shiftRefreshPromise=null, shiftRequestSeq=0, shiftDateCache=Object.create(null);
+const SHIFT_CACHE_FRESH_MS=60*1000;
 let activeBaseRows=[], activeIndex={driver:new Map(),car:new Map(),scanner:new Map()}, masterIndex={driver:new Map(),car:new Map(),scanner:new Map()}, lastLookupValue='';
 let activeLoadedAt=0, masterLoadedAt=0, activeRefreshPromise=null, masterRefreshPromise=null, validationTimer=null, validationStatusTimer=null, transactionConfirmBusy=false, lastActivityPing=0;
 let assignmentCache=new Map(), dashboardLoadedAt=0, dashboardRefreshPromise=null, dashboardRefreshTimer=null;
@@ -503,9 +507,9 @@ function beginButtonBusy(btn){if(!btn||btn.tagName!=='BUTTON')return;btn.classLi
 function endButtonBusy(btn){if(!btn||btn.tagName!=='BUTTON')return;const n=Math.max(0,Number(btn.dataset.busyCount||0)-1);if(n){btn.dataset.busyCount=String(n);return}delete btn.dataset.busyCount;btn.classList.remove('btnBusy');btn.disabled=false}
 function recentButtonForApi(){return recentClickedButton&&performance.now()-recentButtonAt<180?recentClickedButton:null}
 function rememberDashboardSnapshot(r){try{sessionStorage.setItem('fleetDashboardSnapshot',JSON.stringify({at:Date.now(),data:r}))}catch(e){}}
-function restoreDashboardSnapshot(){try{const x=JSON.parse(sessionStorage.getItem('fleetDashboardSnapshot')||'null');if(x&&x.data&&Date.now()-Number(x.at||0)<10*60*1000){dashboardData=x.data;dashboardLoadedAt=Number(x.at||0);renderDashboard(dashboardData);return true}}catch(e){}return false}
+function restoreDashboardSnapshot(){try{const x=JSON.parse(sessionStorage.getItem('fleetDashboardSnapshot')||'null');if(x&&x.data&&Date.now()-Number(x.at||0)<10*60*1000){dashboardData=x.data;dashboardLoadedAt=Number(x.at||0);seedTodayShiftCache(dashboardData);renderDashboard(dashboardData);return true}}catch(e){}return false}
 function renderDashboardSkeleton(){if(dashboardData)return;const box=$('homeOperations');if(box)box.innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>'}
-function scheduleDataRefresh(delay=650){clearTimeout(dashboardRefreshTimer);dashboardRefreshTimer=setTimeout(()=>{refreshDashboard(true);if(JOB_PAGES.includes(currentPage)||currentPage==='lookup')refreshActiveAssignments(true);if(currentPage==='shifts')loadShiftDate(false,true)},delay)}
+function scheduleDataRefresh(delay=650){clearTimeout(dashboardRefreshTimer);dashboardRefreshTimer=setTimeout(()=>{refreshDashboard(true);if(JOB_PAGES.includes(currentPage)||currentPage==='lookup')refreshActiveAssignments(true);if(currentPage==='shifts')loadShiftDate(false,true,true)},delay)}
 function optimisticAssignmentUpdate(a){if(!a||!a.assignmentId)return;cacheAssignments([a]);historyRows=historyRows.map(x=>String(x.assignmentId)===String(a.assignmentId)?Object.assign({},x,a):x);if(dashboardData){let active=Array.isArray(dashboardData.activeAssignments)?dashboardData.activeAssignments.slice():[];active=active.filter(x=>String(x.assignmentId)!==String(a.assignmentId));if(String(a.status).toUpperCase()!=='RETURNED')active.unshift(a);dashboardData.activeAssignments=active.slice(0,20);let recent=Array.isArray(dashboardData.recentActivity)?dashboardData.recentActivity.slice():[];recent=recent.filter(x=>!(String(x.assignmentId)===String(a.assignmentId)&&['START','RETURN'].includes(String(x.type||'').toUpperCase())));if(String(a.status).toUpperCase()==='RETURNED')recent.unshift(Object.assign({},a,{type:'RETURN',time:a.returnTime||displayDateTimeFromParts(a.returnDate,a.returnClock)}));else recent.unshift(Object.assign({},a,{type:'START',time:a.start||displayDateTimeFromParts(a.startDate,a.startTime)}));dashboardData.recentActivity=recent.slice(0,14);dashboardData.out=active.length;dashboardData.vehiclesInUse=new Set(active.map(x=>plateKey(x.car))).size;dashboardData.scannersInUse=new Set(active.map(x=>keyOf(x.scanner))).size;renderDashboard(dashboardData);rememberDashboardSnapshot(dashboardData)}if(currentPage==='history'&&historyRows.length)renderHistory();setActiveBase((activeBaseRows||[]).filter(x=>String(x.assignmentId)!==String(a.assignmentId)).concat(String(a.status).toUpperCase()==='RETURNED'?[]:[a]))}
 function optimisticAssignmentDelete(id){id=String(id||'');forgetAssignment(id);historyRows=historyRows.filter(x=>String(x.assignmentId)!==id);activeBaseRows=activeBaseRows.filter(x=>String(x.assignmentId)!==id);rebuildValidationIndex();if(dashboardData){dashboardData.activeAssignments=(dashboardData.activeAssignments||[]).filter(x=>String(x.assignmentId)!==id);dashboardData.recentActivity=(dashboardData.recentActivity||[]).filter(x=>String(x.assignmentId)!==id);dashboardData.out=dashboardData.activeAssignments.length;renderDashboard(dashboardData);rememberDashboardSnapshot(dashboardData)}if(currentPage==='history')renderHistory()}
 
@@ -797,12 +801,14 @@ async function lookupValue(value){
     if(a?.assignmentId&&USER?.role==='ADMIN')html+='<div style="margin-top:10px">'+adminAssignmentButtons(a)+'</div>';html+='</div><div class="lookupHistory"><h3>'+esc(t('assignmentHistory'))+'</h3>';if(!rows.length)html+='<div class="muted">'+esc(t('noAssignmentHistory'))+'</div>';else html+=assignmentTableHtml(rows,false)+assignmentCardsHtml(rows);html+='</div>';$('lookupResult').innerHTML=html;cameraLookupResult=a;clearScanError('lookup');beep('success')}
   catch(e){const msg=localizeError(e.message||String(e));$('lookupResult').innerHTML='<div class="err">'+esc(msg)+'</div>';rejectScan(msg,'lookup')}finally{cameraLookupBusy=false;if(cameraRunning){renderCameraProgress();$('cameraStatus').textContent=modeCameraStatus()}}
 }
-function refreshDashboard(force=false){if(!TOKEN)return Promise.resolve(null);if(!force&&dashboardData&&Date.now()-dashboardLoadedAt<12000)return Promise.resolve(dashboardData);if(dashboardRefreshPromise)return dashboardRefreshPromise;dashboardRefreshPromise=apiCall('dashboard',[TOKEN]).then(r=>{dashboardData=r;dashboardLoadedAt=Date.now();cacheAssignments(r?.activeAssignments||[]);cacheAssignments((r?.recentActivity||[]).filter(x=>x?.assignmentId));renderDashboard(r);rememberDashboardSnapshot(r);return r}).catch(e=>{if(isAuthError(e.message))handleAuthRequired(e.message);return null}).finally(()=>dashboardRefreshPromise=null);return dashboardRefreshPromise}
+function refreshDashboard(force=false){if(!TOKEN)return Promise.resolve(null);if(!force&&dashboardData&&Date.now()-dashboardLoadedAt<12000)return Promise.resolve(dashboardData);if(dashboardRefreshPromise)return dashboardRefreshPromise;dashboardRefreshPromise=apiCall('dashboard',[TOKEN]).then(r=>{dashboardData=r;dashboardLoadedAt=Date.now();cacheAssignments(r?.activeAssignments||[]);cacheAssignments((r?.recentActivity||[]).filter(x=>x?.assignmentId));seedTodayShiftCache(r);renderDashboard(r);rememberDashboardSnapshot(r);return r}).catch(e=>{if(isAuthError(e.message))handleAuthRequired(e.message);return null}).finally(()=>dashboardRefreshPromise=null);return dashboardRefreshPromise}
 function adminAssignmentButtons(row){
   if(!USER||USER.role!=='ADMIN'||!row?.assignmentId)return'';
   cacheAssignments([row]);
   return '<div class="adminActions"><button class="adminEdit" type="button" data-assignment="'+attr(row.assignmentId)+'" onclick="editAssignmentUI(this.dataset.assignment)">'+esc(t('edit'))+'</button><button class="adminDelete" type="button" data-assignment="'+attr(row.assignmentId)+'" onclick="deleteAssignmentUI(this.dataset.assignment)">'+esc(t('deleteAssignment'))+'</button></div>'
 }
+function normalizeDashboardShiftRows(rows){return (Array.isArray(rows)?rows:[]).map(x=>Object.assign({},x,{status:x.attendanceStatus||(x.status==='STARTED'?'AT_WORK':x.status==='RETURNED'?'COMPLETED':'SCHEDULED'),actualStart:x.actualStart||'',actualReturn:x.actualReturn||''}))}
+function seedTodayShiftCache(r){if(!r||!Array.isArray(r.plannedShifts))return;const iso=localTodayIso(),rows=normalizeDashboardShiftRows(r.plannedShifts);shiftDateCache[iso]={rows:rows,at:Date.now()};if(shiftSelectedDate===iso&&!shiftRows.length){shiftRows=rows;shiftLoadedAt=Date.now()}}
 function operationConditionText(x){return x.fuelPercent!==''&&x.fuelPercent!=null?x.fuelPercent+'%':(x.rangeKm!==''&&x.rangeKm!=null?x.rangeKm+' km':'')}
 function renderDashboard(r){
   if(!r)return;
@@ -880,16 +886,42 @@ function saveCar(){const p=$('cPlate').value,a=$('cActive').value==='true',type=
 function saveScanner(){const id=$('sId').value,a=$('sActive').value==='true';server('upsertScanner',[TOKEN,id,a],()=>{$('sId').value='';loadMaster();refreshMasterData(true);showNotice('success',LANG==='de'?'✓ SCANNER GESPEICHERT':'✓ SCANNER SAVED',id,1250)},m=>showNotice('error',LANG==='de'?'SCANNER NICHT GESPEICHERT':'SCANNER NOT SAVED',m,0)).catch(()=>{})}
 function saveParkingPlace(){const name=$('pName').value.trim(),a=$('pActive').value==='true';if(!name){showNotice('error',LANG==='de'?'PARKPLATZ':'PARKING PLACE',LANG==='de'?'Name eingeben.':'Enter a name.',0);return}server('upsertParkingPlace',[TOKEN,name,a],()=>{$('pName').value='';loadMaster();refreshMasterData(true);showNotice('success',LANG==='de'?'✓ PARKPLATZ GESPEICHERT':'✓ PARKING PLACE SAVED',name,1250)},m=>showNotice('error',LANG==='de'?'PARKPLATZ NICHT GESPEICHERT':'PARKING PLACE NOT SAVED',m,0)).catch(()=>{})}
 function saveFleetSettingsUI(){const tp=$('tpSpreadsheetId').value.trim();server('saveFleetSettings',[TOKEN,{tpSpreadsheetId:tp}],()=>showNotice('success',LANG==='de'?'✓ EINSTELLUNGEN GESPEICHERT':'✓ SETTINGS SAVED',tp||'—',1200),m=>showNotice('error',LANG==='de'?'EINSTELLUNGEN':'SETTINGS',m,0)).catch(()=>{})}
-function openShifts(){showPage('shifts');if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();$('shiftDate').value=shiftSelectedDate;if(shiftRows.length&&Date.now()-shiftLoadedAt<60000){renderShifts();loadShiftDate(false,true)}else loadShiftDate(false)}
-function selectShiftDate(iso){if(!iso)return;shiftSelectedDate=iso;$('shiftDate').value=iso;shiftRows=[];shiftLoadedAt=0;loadShiftDate(false)}
-function changeShiftDay(delta){const base=new Date((shiftSelectedDate||localTodayIso())+'T12:00:00');base.setDate(base.getDate()+Number(delta||0));selectShiftDate(base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0'))}
-async function loadShiftDate(force=false,quiet=false){
-  if(!TOKEN)return;if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();$('shiftDate').value=shiftSelectedDate;
-  if(shiftRefreshPromise)return shiftRefreshPromise;
-  if(!quiet&&!shiftRows.length)$('shiftsList').innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>';
-  shiftRefreshPromise=apiCall('importShiftDate',[TOKEN,shiftSelectedDate,!!force]).then(r=>{shiftRows=Array.isArray(r?.rows)?r.rows:[];shiftLoadedAt=Date.now();renderShifts();if(!shiftRows.length&&r?.message)$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(displayDateTimeFromParts(shiftSelectedDate,''))+'</b></div><div class="muted">'+esc(r.message)+'</div>';return r}).catch(e=>{$('shiftsList').innerHTML='<div class="err">'+esc(localizeError(e?.message||String(e)))+'</div>';if(isAuthError(e?.message))handleAuthRequired(e.message);return null}).finally(()=>shiftRefreshPromise=null);
-  return shiftRefreshPromise
+function cachedShiftDay_(iso){const c=shiftDateCache[String(iso||'')];return c&&Array.isArray(c.rows)?c:null}
+function applyShiftDayCache_(iso,c){if(!c)return false;shiftRows=c.rows;shiftLoadedAt=Number(c.at||0);shiftSelectedDate=iso;$('shiftDate').value=iso;renderShifts();return true}
+function openShifts(){
+  showPage('shifts');
+  if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();
+  $('shiftDate').value=shiftSelectedDate;
+  const c=cachedShiftDay_(shiftSelectedDate);
+  if(c){applyShiftDayCache_(shiftSelectedDate,c);if(Date.now()-c.at>SHIFT_CACHE_FRESH_MS)loadShiftDate(false,true,true);return}
+  if(shiftSelectedDate===localTodayIso()&&dashboardData?.plannedShifts){seedTodayShiftCache(dashboardData);const t=cachedShiftDay_(shiftSelectedDate);if(t){applyShiftDayCache_(shiftSelectedDate,t);return}}
+  loadShiftDate(false);
 }
+function selectShiftDate(iso){
+  if(!iso)return;shiftSelectedDate=iso;$('shiftDate').value=iso;
+  const c=cachedShiftDay_(iso);
+  if(c){applyShiftDayCache_(iso,c);if(Date.now()-c.at>SHIFT_CACHE_FRESH_MS)loadShiftDate(false,true,true);return}
+  shiftRows=[];shiftLoadedAt=0;loadShiftDate(false);
+}
+function changeShiftDay(delta){const base=new Date((shiftSelectedDate||localTodayIso())+'T12:00:00');base.setDate(base.getDate()+Number(delta||0));selectShiftDate(base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0'))}
+async function loadShiftDate(forceImport=false,quiet=false,bypassCache=false){
+  if(!TOKEN)return;if(!shiftSelectedDate)shiftSelectedDate=localTodayIso();$('shiftDate').value=shiftSelectedDate;
+  const requestedDate=shiftSelectedDate;
+  if(!forceImport&&!bypassCache){const c=cachedShiftDay_(requestedDate);if(c&&Date.now()-c.at<SHIFT_CACHE_FRESH_MS){applyShiftDayCache_(requestedDate,c);return Promise.resolve({rows:c.rows,cached:true})}}
+  if(!quiet&&!shiftRows.length)$('shiftsList').innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>';
+  const action=forceImport?'importShiftDate':'getShiftAttendance';
+  const args=forceImport?[TOKEN,requestedDate,true]:[TOKEN,requestedDate,requestedDate];
+  const requestSeq=++shiftRequestSeq;
+  const requestPromise=apiCall(action,args).then(r=>{
+    const rows=forceImport?(Array.isArray(r?.rows)?r.rows:[]):(Array.isArray(r)?r:[]);
+    shiftDateCache[requestedDate]={rows:rows,at:Date.now()};
+    if(shiftSelectedDate===requestedDate){shiftRows=rows;shiftLoadedAt=Date.now();renderShifts();if(!rows.length&&r?.message)$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(displayDateTimeFromParts(requestedDate,''))+'</b></div><div class="muted">'+esc(r.message)+'</div>'}
+    return r;
+  }).catch(e=>{if(shiftSelectedDate===requestedDate&&!quiet)$('shiftsList').innerHTML='<div class="err">'+esc(localizeError(e?.message||String(e)))+'</div>';if(isAuthError(e?.message))handleAuthRequired(e.message);return null}).finally(()=>{if(shiftRefreshPromise===requestPromise)shiftRefreshPromise=null});
+  shiftRefreshPromise=requestPromise;
+  return requestPromise
+}
+
 function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'BEI DER ARBEIT':'AT WORK'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
 function renderShifts(){
   const q=($('shiftSearch')?.value||'').trim().toLowerCase();
