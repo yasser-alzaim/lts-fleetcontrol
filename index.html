@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17354d">
-<title>LTS FleetControl FAST V4.7</title>
-<meta name="fleetcontrol-version" content="FAST V4.7">
+<title>LTS FleetControl FAST V4.8</title>
+<meta name="fleetcontrol-version" content="FAST V4.8">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -121,31 +121,34 @@ button.adminDelete.btnBusy::after,button.red.btnBusy::after,.logoutBtn.btnBusy::
 }
 
 
-/* FAST V4.7: login feedback + TP plans stored directly in Fleet daily sheets */
+/* FAST V4.8: TP-order shift blocks + compact responsive shift layout */
 html.restoringSession #loginCard{display:none!important}
 .restoreScreen{display:none;min-height:70dvh;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--navy);font-weight:900}
 html.restoringSession .restoreScreen{display:flex}
 .uiSpinner{display:inline-block;width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:fcSpin .7s linear infinite;vertical-align:-4px;margin-right:8px}
 @keyframes fcSpin{to{transform:rotate(360deg)}}
 #loginBtn.loginBusy{opacity:.82;cursor:wait}
-.shiftToolbar{display:grid;grid-template-columns:auto minmax(150px,220px) auto auto 1fr;gap:8px;align-items:center;margin-bottom:10px}
+.shiftToolbar{display:grid;grid-template-columns:auto minmax(150px,220px) auto minmax(280px,1fr);gap:8px;align-items:center;margin-bottom:10px}
 .shiftToolbar button{border:1px solid var(--line);background:#f7fafc;color:#385367;border-radius:9px;min-height:42px;padding:8px 11px;font-weight:900}
 .shiftToolbar input[type=date]{margin:0;min-height:42px}
+.shiftToolbarActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
+.shiftToolbarActions button{width:100%}
 .shiftSummary{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 11px}
 .shiftSummary span{border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#f8fafc;font-size:11px;font-weight:900}
 .shiftDayTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0 10px;padding:9px 10px;background:#f7fafc;border:1px solid var(--line);border-radius:10px}
 .shiftState{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
 .shiftState.scheduled{background:#e8f2fb;color:#285f86}.shiftState.atwork{background:#fff1cc;color:#855900}.shiftState.completed{background:#e5f6eb;color:#187443}.shiftState.absent{background:#ffe8e6;color:#a72a21}.shiftState.unmatched{background:#fff0d9;color:#9a5c00}
 .shiftRow.atwork{background:#fffaf0}.shiftRow.completed{background:#f4fbf6}.shiftRow.absent{background:#fff6f5}.shiftRow.unmatched{background:#fffaf1}
+.shiftBlockSeparator{height:9px;background:#000;border-radius:2px;margin:7px 0}.shiftBlockSeparatorRow td{height:9px!important;padding:0!important;background:#000!important;border:0!important}.shiftPlanText{font-weight:950;white-space:nowrap}
 .shiftCards{display:none}.shiftCard{border:1px solid var(--line);border-radius:13px;padding:11px;margin:8px 0;background:#fff;box-shadow:0 4px 14px rgba(24,42,58,.05)}
 .shiftCardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.shiftCardName{font-size:15px;font-weight:900}.shiftCardTime{font-size:12px;color:var(--muted);font-weight:850;margin-top:2px}.shiftCardGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.shiftCardGrid div{background:#f8fafc;border-radius:8px;padding:7px;min-width:0}.shiftCardGrid small{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase}.shiftCardGrid b{display:block;margin-top:2px;font-size:12px;overflow-wrap:anywhere}.shiftCard .miniBtn{width:100%;margin-top:9px;min-height:42px}
 @media(max-width:760px){
   #pageShifts{padding:8px!important}
   #pageShifts .panelHead h2{font-size:17px!important}
   .shiftToolbar{grid-template-columns:42px minmax(0,1fr) 42px;gap:5px;position:sticky;top:54px;z-index:5;background:#fff;padding:5px 0}
-  .shiftToolbar .shiftToday,.shiftToolbar .shiftRefresh{grid-column:auto;min-height:38px;font-size:10px;padding:6px}
-  .shiftToolbar .shiftToday{grid-column:1/3}.shiftToolbar .shiftRefresh{grid-column:3/4}
   .shiftToolbar input[type=date]{min-width:0;width:100%;font-size:14px;padding:5px}
+  .shiftToolbarActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+  .shiftToolbar .shiftToday,.shiftToolbar .shiftRefresh{min-height:42px;font-size:10px;padding:7px 6px;width:100%}
   #pageShifts .searchbar input{min-height:42px}
   .shiftDesktop{display:none!important}.shiftCards{display:block!important}
   .shiftDayTitle{padding:8px;margin:6px 0}.shiftDayTitle b{font-size:12px}.shiftSummary{gap:4px}.shiftSummary span{font-size:9px;padding:5px 7px}
@@ -236,8 +239,10 @@ html.restoringSession .restoreScreen{display:flex}
         <button type="button" onclick="changeShiftDay(-1)" aria-label="Previous day">‹</button>
         <input id="shiftDate" type="date" onchange="selectShiftDate(this.value)">
         <button type="button" onclick="changeShiftDay(1)" aria-label="Next day">›</button>
-        <button type="button" class="shiftToday" onclick="selectShiftDate(localTodayIso())" data-en="TODAY" data-de="HEUTE">HEUTE</button>
-        <button type="button" class="shiftRefresh" onclick="loadShiftDate(true)" data-en="READ TP AGAIN" data-de="TP NEU EINLESEN">TP NEU EINLESEN</button>
+        <div class="shiftToolbarActions">
+          <button type="button" class="shiftToday" onclick="selectShiftDate(localTodayIso())" data-en="TODAY" data-de="HEUTE">HEUTE</button>
+          <button type="button" class="shiftRefresh" onclick="loadShiftDate(true)" data-en="IMPORT SHIFTS" data-de="SCHICHTEN IMPORTIEREN">SCHICHTEN IMPORTIEREN</button>
+        </div>
       </div>
       <div id="shiftSummary" class="shiftSummary"></div>
       <div class="searchbar"><input id="shiftSearch" oninput="renderShifts()" data-ph="driverName" placeholder="Fahrer suchen"></div>
@@ -887,13 +892,28 @@ async function loadShiftDate(force=false,quiet=false){
 }
 function shiftStateInfo(status){const s=String(status||'').toUpperCase();if(s==='AT_WORK')return{cls:'atwork',label:LANG==='de'?'BEI DER ARBEIT':'AT WORK'};if(s==='COMPLETED')return{cls:'completed',label:LANG==='de'?'ABGESCHLOSSEN':'COMPLETED'};if(s==='ABSENT')return{cls:'absent',label:LANG==='de'?'NICHT ERSCHIENEN':'ABSENT'};if(s==='UNMATCHED')return{cls:'unmatched',label:LANG==='de'?'NICHT ZUGEORDNET':'UNMATCHED'};return{cls:'scheduled',label:LANG==='de'?'GEPLANT':'SCHEDULED'}}
 function renderShifts(){
-  const q=($('shiftSearch')?.value||'').trim().toLowerCase();let rows=(shiftRows||[]).filter(r=>!q||[r.driver,r.driverId,r.driverNameFleet,r.shiftText,r.car,r.scanner,r.status].join(' ').toLowerCase().includes(q));
-  const counts={SCHEDULED:0,AT_WORK:0,COMPLETED:0,ABSENT:0,UNMATCHED:0};(shiftRows||[]).forEach(r=>{const k=String(r.status||'SCHEDULED').toUpperCase();counts[k]=(counts[k]||0)+1});
-  const sm=$('shiftSummary');if(sm)sm.innerHTML='<span>'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span><span>🔵 '+counts.SCHEDULED+'</span><span>🟨 '+counts.AT_WORK+'</span><span>🟩 '+counts.COMPLETED+'</span><span>🟥 '+counts.ABSENT+'</span>'+(counts.UNMATCHED?'<span>🟧 '+counts.UNMATCHED+'</span>':'');
+  const q=($('shiftSearch')?.value||'').trim().toLowerCase();
+  const rows=(shiftRows||[]).filter(r=>!q||[r.driver,r.driverId,r.driverNameFleet,r.shiftText,r.car,r.scanner,r.status].join(' ').toLowerCase().includes(q));
+  const counts={SCHEDULED:0,AT_WORK:0,COMPLETED:0,ABSENT:0,UNMATCHED:0};
+  (shiftRows||[]).forEach(r=>{const k=String(r.status||'SCHEDULED').toUpperCase();counts[k]=(counts[k]||0)+1});
+  const sm=$('shiftSummary');
+  if(sm)sm.innerHTML='<span>'+(LANG==='de'?'Gesamt ':'Total ')+(shiftRows||[]).length+'</span><span>🔵 '+counts.SCHEDULED+'</span><span>🟨 '+counts.AT_WORK+'</span><span>🟩 '+counts.COMPLETED+'</span><span>🟥 '+counts.ABSENT+'</span>'+(counts.UNMATCHED?'<span>🟧 '+counts.UNMATCHED+'</span>':'');
   const dateLabel=shiftSelectedDate?displayDateTimeFromParts(shiftSelectedDate,''):'';
   if(!rows.length){$('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b></div><div class="muted">'+esc(LANG==='de'?'Keine importierten Schichten für diesen Tag.':'No imported shifts for this day.')+'</div>';return}
-  const desktop='<div class="shiftDesktop tableWrap"><table><tr><th>'+esc(t('time'))+'</th><th>'+esc(t('driver'))+'</th><th>'+(LANG==='de'?'Schicht':'Shift')+'</th><th>'+esc(t('status'))+'</th><th>'+esc(t('car'))+'</th><th>'+esc(t('scanner'))+'</th><th>'+(LANG==='de'?'Ist-Zeit':'Actual')+'</th><th></th></tr>'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&['SCHEDULED','ABSENT'].includes(String(r.status).toUpperCase());return '<tr class="shiftRow '+st.cls+'"><td><b>'+esc(r.start||'—')+'</b>'+(r.end?'–'+esc(r.end):'')+'</td><td><b>'+esc(r.driver)+'</b>'+(r.driverId?'<br><small>'+esc(r.driverId)+'</small>':'')+'</td><td>'+esc(r.shiftText||'—')+'</td><td><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></td><td>'+esc(r.car||'—')+'</td><td>'+esc(r.scanner||'—')+'</td><td>'+esc(r.actualStart||'—')+(r.actualReturn?'<br>→ '+esc(r.actualReturn):'')+'</td><td>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">START</button>':'')+'</td></tr>'}).join('')+'</table></div>';
-  const cards='<div class="shiftCards">'+rows.map(r=>{const st=shiftStateInfo(r.status),can=!!r.driverId&&['SCHEDULED','ABSENT'].includes(String(r.status).toUpperCase());return '<div class="shiftCard shiftRow '+st.cls+'"><div class="shiftCardHead"><div><div class="shiftCardName">'+esc(r.driver||'—')+'</div><div class="shiftCardTime">'+esc(r.start||'—')+(r.end?' – '+esc(r.end):'')+' · '+esc(r.shiftText||'')+'</div>'+(r.driverId?'<small>'+esc(r.driverId)+'</small>':'')+'</div><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></div><div class="shiftCardGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(r.car||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(r.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(r.actualStart||'—')+'</b></div><div><small>'+esc(t('returnLabel'))+'</small><b>'+esc(r.actualReturn||'—')+'</b></div></div>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">'+(LANG==='de'?'ZUWEISUNG STARTEN':'START ASSIGNMENT')+'</button>':'')+'</div>'}).join('')+'</div>';
+
+  const desktopRows=rows.map((r,i)=>{
+    const sep=i>0&&String(rows[i-1].shiftText||'')!==String(r.shiftText||'')?'<tr class="shiftBlockSeparatorRow"><td colspan="7"></td></tr>':'';
+    const st=shiftStateInfo(r.status),can=!!r.driverId&&['SCHEDULED','ABSENT'].includes(String(r.status).toUpperCase());
+    return sep+'<tr class="shiftRow '+st.cls+'"><td class="shiftPlanText">'+esc(r.shiftText||'—')+'</td><td><b>'+esc(r.driver)+'</b>'+(r.driverId?'<br><small>'+esc(r.driverId)+'</small>':'')+'</td><td><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></td><td>'+esc(r.car||'—')+'</td><td>'+esc(r.scanner||'—')+'</td><td>'+esc(r.actualStart||'—')+(r.actualReturn?'<br>→ '+esc(r.actualReturn):'')+'</td><td>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">START</button>':'')+'</td></tr>';
+  }).join('');
+  const desktop='<div class="shiftDesktop tableWrap"><table><tr><th>'+(LANG==='de'?'Geplante Schicht':'Planned Shift')+'</th><th>'+esc(t('driver'))+'</th><th>'+esc(t('status'))+'</th><th>'+esc(t('car'))+'</th><th>'+esc(t('scanner'))+'</th><th>'+(LANG==='de'?'Ist-Zeit':'Actual')+'</th><th></th></tr>'+desktopRows+'</table></div>';
+
+  const cards='<div class="shiftCards">'+rows.map((r,i)=>{
+    const sep=i>0&&String(rows[i-1].shiftText||'')!==String(r.shiftText||'')?'<div class="shiftBlockSeparator"></div>':'';
+    const st=shiftStateInfo(r.status),can=!!r.driverId&&['SCHEDULED','ABSENT'].includes(String(r.status).toUpperCase());
+    return sep+'<div class="shiftCard shiftRow '+st.cls+'"><div class="shiftCardHead"><div><div class="shiftCardName">'+esc(r.driver||'—')+'</div>'+(r.driverId?'<small>'+esc(r.driverId)+'</small>':'')+'</div><span class="shiftState '+st.cls+'">'+esc(st.label)+'</span></div><div class="shiftCardTime shiftPlanText">'+esc(r.shiftText||'—')+'</div><div class="shiftCardGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(r.car||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(r.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(r.actualStart||'—')+'</b></div><div><small>'+esc(t('returnLabel'))+'</small><b>'+esc(r.actualReturn||'—')+'</b></div></div>'+(can?'<button class="miniBtn" onclick="startFromShift(\''+attr(r.driverId)+'\')">'+(LANG==='de'?'ZUWEISUNG STARTEN':'START ASSIGNMENT')+'</button>':'')+'</div>';
+  }).join('')+'</div>';
+
   $('shiftsList').innerHTML='<div class="shiftDayTitle"><b>'+esc(dateLabel)+'</b><span>'+rows.length+' '+(LANG==='de'?'Schichten':'shifts')+'</span></div>'+desktop+cards
 }
 function startFromShift(driverId){flows.start=blankFlow();flows.start.driver={value:'D:'+driverId,method:'TP'};persistDrafts();openJob('start');renderFlow('start')}
