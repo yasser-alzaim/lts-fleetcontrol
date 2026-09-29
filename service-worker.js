@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-0-status-final-1';
+const CACHE_NAME = 'fleetcontrol-v5-0-shift-times-equipment-hold-1';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
