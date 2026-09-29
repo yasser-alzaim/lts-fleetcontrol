@@ -8,23 +8,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="FleetControl">
+<link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<script>
-try{
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).catch(()=>{});
-  }
-  if('caches' in window){
-    caches.keys().then(k=>Promise.all(k.map(x=>caches.delete(x)))).catch(()=>{});
-  }
-}catch(e){}
-</script>
-<title>LTS FleetControl V5.0 CONNECTION TEST</title>
+<title>LTS FleetControl V5.0</title>
+<meta name="fleetcontrol-version" content="V5.0">
+<meta name="fleetcontrol-build" content="clean-stable-fast-1">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -555,7 +545,7 @@ function optimisticAssignmentDelete(id){id=String(id||'');forgetAssignment(id);h
 function setLang(v){LANG=v;localStorage.setItem('fleetLang',v);applyLanguage();updateConnection();renderSyncIndicator()}
 function applyLanguage(){document.documentElement.lang=LANG;if($('loginBtnText')&&!$('loginBtn')?.disabled)$('loginBtnText').textContent=t('signIn');if($('restoreText'))$('restoreText').textContent=LANG==='de'?'Sitzung wird wiederhergestellt…':'Restoring session…';if($('mobileMenuBtn'))$('mobileMenuBtn').setAttribute('aria-label',LANG==='de'?'Menü':'Menu');document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.dataset.i18n;if(t(k))el.textContent=t(k)});document.querySelectorAll('[data-ph]').forEach(el=>el.placeholder=t(el.dataset.ph));document.querySelectorAll('[data-en][data-de]').forEach(el=>{el.textContent=LANG==='de'?el.dataset.de:el.dataset.en});['langEn','langEnLogin'].forEach(id=>$(id)?.classList.toggle('active',LANG==='en'));['langDe','langDeLogin'].forEach(id=>$(id)?.classList.toggle('active',LANG==='de'));renderMode();renderFlow('start');renderFlow('return');renderReplacement('replaceScanner');renderReplacement('replaceCar');renderFailedJobsPage();updateWorkStatus('start');updateWorkStatus('return');updateWorkStatus('replaceScanner');updateWorkStatus('replaceCar');if(dashboardData)renderDashboard(dashboardData);if(shiftRows.length)renderShifts();if(historyRows.length)renderHistory();if(changeRows.length)renderChanges();if(USER&&$('who')){$('who').textContent=USER.name+' — '+(LANG==='de'&&String(USER.role).toUpperCase()==='USER'?'BENUTZER':USER.role)}if(currentPage==='users'&&USER?.role==='ADMIN')loadUsers();if(currentPage==='master'&&USER?.role==='ADMIN')loadMaster();if(!$('modeChoiceOverlay')?.classList.contains('hidden')){$('modeChoiceTitle').textContent=t('chooseInputMode');$('modeChoiceHelp').textContent=t('modeHelp')}}
 
-window.addEventListener('message',event=>{const d=event.data;if(!d||d.fleetQrApi!==true||!d.id)return;const item=pending.get(d.id);if(!item)return;if(item.source&&event.source!==item.source)return;d.ok?item.resolve(d.result):item.reject(new Error(d.error||'Backend error'))});
+window.addEventListener('message',event=>{const d=event.data;if(!d||d.fleetQrApi!==true||!d.id)return;const item=pending.get(d.id);if(!item)return;d.ok?item.resolve(d.result):item.reject(new Error(d.error||'Backend error'))});
 function renderSyncIndicator(detail=''){
   const el=$('syncIndicator'),txt=$('syncIndicatorText');if(!el||!txt)return;
   el.className='syncIndicator '+syncState;
@@ -575,7 +565,7 @@ function apiCall(action,args=[]){
     if(!API_URL){fail(new Error('Backend URL is not configured.'));return}
     const id='r'+Date.now()+'_'+(++requestSeq)+'_'+Math.random().toString(36).slice(2),frameName='fleetApiFrame_'+id,iframe=document.createElement('iframe');iframe.name=frameName;iframe.style.display='none';document.body.appendChild(iframe);
     const cleanup=()=>{pending.delete(id);setTimeout(()=>iframe.remove(),300)},timer=setTimeout(()=>{cleanup();fail(new Error('Backend request timed out.'))},30000);
-    pending.set(id,{source:iframe.contentWindow,resolve:v=>{clearTimeout(timer);cleanup();doneBtn();if(track)syncSuccess();resolve(v)},reject:e=>{clearTimeout(timer);cleanup();fail(e)}});
+    pending.set(id,{resolve:v=>{clearTimeout(timer);cleanup();doneBtn();if(track)syncSuccess();resolve(v)},reject:e=>{clearTimeout(timer);cleanup();fail(e)}});
     const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target=frameName;form.style.display='none';const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify({id,action,args});form.appendChild(input);document.body.appendChild(form);form.submit();setTimeout(()=>form.remove(),600)
   })
 }
@@ -1026,6 +1016,14 @@ async function testBackend(){$('serverState').textContent=LANG==='de'?'Backend w
 document.addEventListener('DOMContentLoaded',()=>{applyLanguage();renderSyncIndicator();loadPersistedState();loadNavigationState();hydrateShiftSessionCache();updateConnection();document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled)return;recentClickedButton=b;recentButtonAt=performance.now();pulseButton(b)},true);['loginUser','loginPass'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')signIn()}));document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('confirmOverlay').classList.contains('hidden'))$('confirmBack')?.click();else if(cameraRunning)finishCameraSession();else if(JOB_PAGES.includes(currentPage))closeJob()}},true);document.addEventListener('keydown',hardwareKeyListener,true);['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,markUserActivity,{passive:true}));testBackend();restoreLogin()});window.addEventListener('resize',()=>{INPUT_MODE=getPreferredInputMode();renderMode();if(currentPage==='shifts'&&shiftRows.length)renderShifts()});
 </script>
 
-
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const registerFleetWorker = () => navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    if ('requestIdleCallback' in window) requestIdleCallback(registerFleetWorker, {timeout:1500});
+    else setTimeout(registerFleetWorker, 500);
+  });
+}
+</script>
 </body>
 </html>
