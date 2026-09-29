@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-0-pwa-2';
+const CACHE_NAME = 'fleetcontrol-v5-0-pwa-3';
 const STATIC_ASSETS = [
   './',
   './index.html',
