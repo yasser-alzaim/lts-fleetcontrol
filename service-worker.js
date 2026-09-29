@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-0-stable-extreme-fast-1';
+const CACHE_NAME = 'fleetcontrol-v5-0-clean-stable-fast-1';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
@@ -11,7 +11,6 @@ const CORE_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    // One unavailable icon must never cancel the whole PWA installation.
     await Promise.allSettled(CORE_ASSETS.map(async url => {
       const request = new Request(url, {cache:'reload'});
       const response = await fetch(request);
