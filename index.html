@@ -8,13 +8,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="FleetControl">
-<link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
-<title>LTS FleetControl V5.0</title>
-<meta name="fleetcontrol-version" content="V5.0">
-<meta name="fleetcontrol-build" content="clean-stable-fast-1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).catch(()=>{});
+  }
+  if('caches' in window){
+    caches.keys().then(k=>Promise.all(k.map(x=>caches.delete(x)))).catch(()=>{});
+  }
+}catch(e){}
+</script>
+<title>LTS FleetControl V5.0 CONNECTION TEST</title>
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -1016,14 +1026,6 @@ async function testBackend(){$('serverState').textContent=LANG==='de'?'Backend w
 document.addEventListener('DOMContentLoaded',()=>{applyLanguage();renderSyncIndicator();loadPersistedState();loadNavigationState();hydrateShiftSessionCache();updateConnection();document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled)return;recentClickedButton=b;recentButtonAt=performance.now();pulseButton(b)},true);['loginUser','loginPass'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')signIn()}));document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('confirmOverlay').classList.contains('hidden'))$('confirmBack')?.click();else if(cameraRunning)finishCameraSession();else if(JOB_PAGES.includes(currentPage))closeJob()}},true);document.addEventListener('keydown',hardwareKeyListener,true);['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,markUserActivity,{passive:true}));testBackend();restoreLogin()});window.addEventListener('resize',()=>{INPUT_MODE=getPreferredInputMode();renderMode();if(currentPage==='shifts'&&shiftRows.length)renderShifts()});
 </script>
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const registerFleetWorker = () => navigator.serviceWorker.register('./service-worker.js').catch(() => {});
-    if ('requestIdleCallback' in window) requestIdleCallback(registerFleetWorker, {timeout:1500});
-    else setTimeout(registerFleetWorker, 500);
-  });
-}
-</script>
+
 </body>
 </html>
