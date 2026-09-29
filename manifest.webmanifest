@@ -3,11 +3,18 @@
   "name": "LTS FleetControl",
   "short_name": "FleetControl",
   "description": "LTS FleetControl for driver, vehicle, scanner and shift operations.",
-  "start_url": "./",
+  "lang": "de",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
   "background_color": "#eef3f7",
   "theme_color": "#17354d",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "./icons/icon-192.png",
