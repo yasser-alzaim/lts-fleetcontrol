@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-3-daily-only-1';
+const CACHE_NAME = 'fleetcontrol-v5-3-2-date-fix-1';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
