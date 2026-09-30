@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-0-performance-qr-2';
+const CACHE_NAME = 'fleetcontrol-v5-2-full-performance-qr';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
