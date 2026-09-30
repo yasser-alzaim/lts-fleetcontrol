@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-2-full-performance-qr';
+const CACHE_NAME = 'fleetcontrol-v5-3-daily-only-1';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
@@ -26,9 +26,6 @@ self.addEventListener('activate', event => {
     await Promise.all(keys
       .filter(key => key.startsWith('fleetcontrol-') && key !== CACHE_NAME)
       .map(key => caches.delete(key)));
-    if (self.registration.navigationPreload) {
-      try { await self.registration.navigationPreload.enable(); } catch (e) {}
-    }
     await self.clients.claim();
   })());
 });
@@ -43,7 +40,7 @@ self.addEventListener('fetch', event => {
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
-        const response = (await event.preloadResponse) || await fetch(req);
+        const response = await fetch(req);
         if (response && response.ok) {
           const cache = await caches.open(CACHE_NAME);
           cache.put('./index.html', response.clone()).catch(() => {});
