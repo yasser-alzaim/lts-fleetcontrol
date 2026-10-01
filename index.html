@@ -900,7 +900,7 @@ function stopRemoteSync(){clearInterval(remoteSyncTimer);remoteSyncTimer=null;re
 function startRemoteSync(){
   clearInterval(remoteSyncTimer);
   checkRemoteSync(true);
-  remoteSyncTimer=setInterval(()=>checkRemoteSync(false),6000)
+  remoteSyncTimer=setInterval(()=>checkRemoteSync(false),8000)
 }
 async function checkRemoteSync(force=false){
   if(!TOKEN||remoteSyncBusy||document.hidden||queueBusy||transactionConfirmBusy)return;
@@ -915,11 +915,14 @@ async function checkRemoteSync(force=false){
     activeLoadedAt=0;dashboardLoadedAt=0;shiftLoadedAt=0;
     shiftDateCache=Object.create(null);
     try{sessionStorage.removeItem(SHIFT_SESSION_CACHE_KEY)}catch(e){}
-    await Promise.all([refreshActiveAssignments(true),refreshDashboard(true)]);
-    if(currentPage==='shifts')await loadShiftDate(false,true,true);
-    else if(currentPage==='history')loadHistory();
-    else if(currentPage==='changes')loadChanges();
-    else if(currentPage==='out')renderStillOut();
+    // Refresh only what the dispatcher is currently looking at.  Previously
+    // every remote change fired active + dashboard + page requests together.
+    if(currentPage==='home') await refreshDashboard(true);
+    else if(currentPage==='shifts') await loadShiftDate(false,true,true);
+    else if(currentPage==='history') loadHistory();
+    else if(currentPage==='changes') loadChanges();
+    else if(currentPage==='out'){await refreshActiveAssignments(true);renderStillOut()}
+    else if(JOB_PAGES.includes(currentPage)||currentPage==='lookup') await refreshActiveAssignments(true);
   }catch(e){if(isAuthError(e?.message))handleAuthRequired(e.message)}
   finally{remoteSyncBusy=false}
 }
