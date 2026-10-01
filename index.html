@@ -12,8 +12,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
-<title>LTS FleetControl V5.3.2</title>
-<meta name="fleetcontrol-version" content="V5.3.2">
+<title>LTS FleetControl V5.3.4</title>
+<meta name="fleetcontrol-version" content="V5.3.4">
 <meta name="fleetcontrol-build" content="daily-fleet-3-1">
 <script>try{if(localStorage.getItem('fleetToken'))document.documentElement.classList.add('restoringSession')}catch(e){}</script>
 <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -322,8 +322,8 @@ html.restoringSession .restoreScreen{display:flex}
 
     <section id="pageLookup" class="page panel hidden"><div class="panelHead"><h2 data-i18n="lookup">SUCHEN</h2></div><div id="lookupWorkStatus" class="workstatus ready" data-en="Ready" data-de="Bereit">Bereit</div><div id="lookupManualPanel" class="manualPanel hidden"><input id="lookupManual" data-ph="lookupManual"><button class="primary" onclick="lookupManual()" data-en="SEARCH" data-de="SUCHEN">SUCHEN</button></div><div id="lookupResult"></div></section>
     <section id="pageOut" class="page panel hidden"><div class="panelHead"><h2 data-i18n="stillOut">NOCH UNTERWEGS</h2></div><div class="searchbar"><input id="outSearch" data-ph="search" oninput="renderStillOut()"></div><div id="outList"></div></section>
-    <section id="pageHistory" class="page panel hidden"><div class="panelHead"><h2 data-i18n="history">VERLAUF</h2></div><div class="searchbar"><input id="historySearch" data-ph="search" oninput="renderHistory()"></div><div id="historyList"></div></section>
-    <section id="pageChanges" class="page panel hidden"><div class="panelHead"><h2 data-i18n="changes">ÄNDERUNGEN</h2></div><div class="searchbar"><input id="changesSearch" data-ph="search" oninput="renderChanges()"></div><div id="changesList"></div></section>
+    <section id="pageHistory" class="page panel hidden"><div class="panelHead"><h2 data-i18n="history">VERLAUF</h2></div><div class="searchbar"><input id="historySearch" data-ph="search" oninput="scheduleHistoryRender()"></div><div id="historyList"></div></section>
+    <section id="pageChanges" class="page panel hidden"><div class="panelHead"><h2 data-i18n="changes">ÄNDERUNGEN</h2></div><div class="searchbar"><input id="changesSearch" data-ph="search" oninput="scheduleChangesRender()"></div><div id="changesList"></div></section>
     <section id="pageFailed" class="page panel hidden"><div class="panelHead"><h2 data-i18n="failedJobs">FAILED</h2></div><div id="failedList"></div></section>
 
     <section id="pageUsers" class="page panel hidden">
@@ -887,13 +887,47 @@ async function stopCamera(){if(html5Qr){try{await html5Qr.stop()}catch(e){}try{a
 async function finishCameraSession(){const page=currentPage;clearScanError(page);await stopCamera();if(page==='start'||page==='return'){flows[page]=blankFlow();renderFlow(page)}else if(page==='replaceScanner'||page==='replaceCar'){replacements[page]={first:'',second:'',method:''};const reason=$(page+'Reason');if(reason)reason.value='';renderReplacement(page)}persistDrafts();INPUT_MODE=getPreferredInputMode();pendingModePage='';if(page==='lookup'){document.querySelectorAll('.jobModal').forEach(p=>p.classList.add('hidden'));showPage('home')}else closeJob();refreshDashboard(false);showScanToast('success',LANG==='de'?'FERTIG':'DONE',650)}
 
 function lookupManual(){let v=$('lookupManual').value.trim();if(v&&!/^[DCS]\s*:/i.test(v)){const car=masterIndex.car.get(plateKey(v));if(car)v='C:'+v}lookupValue(v)}
+function lookupCardHtml(a){
+  if(!a)return '';
+  let html='<div class="lookupCard">';
+  if(a.status==='OUT'||a.lookupStatus==='OUT'){
+    html+='<div class="lookupStatus out">'+(LANG==='de'?'UNTERWEGS':'OUT')+'</div><div class="lookupGrid"><div><small>'+esc(t('driver'))+'</small><b>'+esc(a.driver||'—')+(a.driverId?' · '+esc(a.driverId):'')+'</b></div><div><small>'+esc(t('car'))+'</small><b>'+esc(a.car||a.plate||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(a.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(a.start||'—')+'</b></div></div>';
+  }else{
+    const electric=isElectricType(a.carType);
+    html+='<div class="lookupStatus available">'+(LANG==='de'?'VERFÜGBAR':'AVAILABLE')+'</div><div class="lookupGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(a.plate||a.car||'—')+(a.carType?' · '+esc(LANG==='de'&&String(a.carType).toLowerCase()==='electro'?'Elektro':a.carType):'')+'</b></div><div><small>'+esc(t('parkingPlace'))+'</small><b>'+esc(a.parkingPlace||'—')+'</b></div><div><small>'+(electric?(LANG==='de'?'REICHWEITE':'RANGE'):(LANG==='de'?'TANK':'FUEL'))+'</small><b>'+esc(electric?(a.rangeKm!==''?a.rangeKm+' km':'—'):(a.fuelPercent!==''?a.fuelPercent+'%':'—'))+'</b></div><div><small>'+esc(t('lastReturn'))+'</small><b>'+esc(a.lastReturn||'—')+'</b></div></div>';
+  }
+  if(a?.assignmentId&&USER?.role==='ADMIN')html+='<div style="margin-top:10px">'+adminAssignmentButtons(a)+'</div>';
+  return html+'</div>';
+}
+function lookupHistoryHtml(rows,loading=false){
+  let html='<div class="lookupHistory"><h3>'+esc(t('assignmentHistory'))+'</h3>';
+  if(loading)html+='<div class="fastSkeleton"><span></span><span></span></div>';
+  else if(!rows.length)html+='<div class="muted">'+esc(t('noAssignmentHistory'))+'</div>';
+  else html+=window.matchMedia('(max-width:760px)').matches?assignmentCardsHtml(rows):assignmentTableHtml(rows,false);
+  return html+'</div>';
+}
 async function lookupValue(value){
-  if(!value)return;lastLookupValue=String(value);cameraLookupBusy=true;if(cameraRunning)renderCameraProgress();
-  try{const [a,hist]=await Promise.all([apiCall('lookupActiveAssignment',[TOKEN,value]),apiCall('lookupAssignmentHistory',[TOKEN,value,20])]);const rows=Array.isArray(hist)?hist:[];cacheAssignments(rows);if(a?.assignmentId)cacheAssignments([a]);let html='<div class="lookupCard">';
-    if(a.status==='OUT'||a.lookupStatus==='OUT'){html+='<div class="lookupStatus out">'+(LANG==='de'?'UNTERWEGS':'OUT')+'</div><div class="lookupGrid"><div><small>'+esc(t('driver'))+'</small><b>'+esc(a.driver||'—')+(a.driverId?' · '+esc(a.driverId):'')+'</b></div><div><small>'+esc(t('car'))+'</small><b>'+esc(a.car||a.plate||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(a.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><b>'+esc(a.start||'—')+'</b></div></div>'}
-    else{const electric=isElectricType(a.carType);html+='<div class="lookupStatus available">'+(LANG==='de'?'VERFÜGBAR':'AVAILABLE')+'</div><div class="lookupGrid"><div><small>'+esc(t('car'))+'</small><b>'+esc(a.plate||a.car||'—')+(a.carType?' · '+esc(LANG==='de'&&String(a.carType).toLowerCase()==='electro'?'Elektro':a.carType):'')+'</b></div><div><small>'+esc(t('parkingPlace'))+'</small><b>'+esc(a.parkingPlace||'—')+'</b></div><div><small>'+(electric?(LANG==='de'?'REICHWEITE':'RANGE'):(LANG==='de'?'TANK':'FUEL'))+'</small><b>'+esc(electric?(a.rangeKm!==''?a.rangeKm+' km':'—'):(a.fuelPercent!==''?a.fuelPercent+'%':'—'))+'</b></div><div><small>'+esc(t('lastReturn'))+'</small><b>'+esc(a.lastReturn||'—')+'</b></div></div>'}
-    if(a?.assignmentId&&USER?.role==='ADMIN')html+='<div style="margin-top:10px">'+adminAssignmentButtons(a)+'</div>';html+='</div><div class="lookupHistory"><h3>'+esc(t('assignmentHistory'))+'</h3>';if(!rows.length)html+='<div class="muted">'+esc(t('noAssignmentHistory'))+'</div>';else html+=assignmentTableHtml(rows,false)+assignmentCardsHtml(rows);html+='</div>';$('lookupResult').innerHTML=html;cameraLookupResult=a;clearScanError('lookup');beep('success')}
-  catch(e){const msg=localizeError(e.message||String(e));$('lookupResult').innerHTML='<div class="err">'+esc(msg)+'</div>';rejectScan(msg,'lookup')}finally{cameraLookupBusy=false;if(cameraRunning){renderCameraProgress();$('cameraStatus').textContent=modeCameraStatus()}}
+  if(!value)return;
+  const requested=String(value);
+  lastLookupValue=requested;cameraLookupBusy=true;if(cameraRunning)renderCameraProgress();
+  let active=null,activeError=null;
+  try{
+    try{active=await apiCall('lookupActiveAssignment',[TOKEN,requested])}catch(e){activeError=e}
+    if(requested!==lastLookupValue)return;
+    if(active){if(active.assignmentId)cacheAssignments([active]);$('lookupResult').innerHTML=lookupCardHtml(active)+lookupHistoryHtml([],true);cameraLookupResult=active;clearScanError('lookup');beep('success')}
+    else $('lookupResult').innerHTML=lookupHistoryHtml([],true);
+
+    let rows=[];
+    try{const hist=await apiCall('lookupAssignmentHistory',[TOKEN,requested,20]);rows=Array.isArray(hist)?hist:[];cacheAssignments(rows)}catch(e){if(!active)throw e}
+    if(requested!==lastLookupValue)return;
+    if(!active&&activeError&&rows.length===0)throw activeError;
+    $('lookupResult').innerHTML=(active?lookupCardHtml(active):'')+lookupHistoryHtml(rows,false);
+    if(!active&&rows.length){clearScanError('lookup');beep('success')}
+  }catch(e){
+    const msg=localizeError(e.message||String(e));$('lookupResult').innerHTML='<div class="err">'+esc(msg)+'</div>';rejectScan(msg,'lookup')
+  }finally{
+    if(requested===lastLookupValue){cameraLookupBusy=false;if(cameraRunning){renderCameraProgress();$('cameraStatus').textContent=modeCameraStatus()}}
+  }
 }
 
 function stopRemoteSync(){clearInterval(remoteSyncTimer);remoteSyncTimer=null;remoteSyncBusy=false;lastRemoteSyncStamp=''}
@@ -919,8 +953,8 @@ async function checkRemoteSync(force=false){
     // every remote change fired active + dashboard + page requests together.
     if(currentPage==='home') await refreshDashboard(true);
     else if(currentPage==='shifts') await loadShiftDate(false,true,true);
-    else if(currentPage==='history') loadHistory();
-    else if(currentPage==='changes') loadChanges();
+    else if(currentPage==='history'){ historyRemoteDirty=true; }
+    else if(currentPage==='changes'){ changesRemoteDirty=true; }
     else if(currentPage==='out'){await refreshActiveAssignments(true);renderStillOut()}
     else if(JOB_PAGES.includes(currentPage)||currentPage==='lookup') await refreshActiveAssignments(true);
   }catch(e){if(isAuthError(e?.message))handleAuthRequired(e.message)}
@@ -950,11 +984,14 @@ function renderDashboard(r){
 }
 function loadStillOut(){$('outList').textContent=t('loading');server('stillOut',[TOKEN],rows=>{setActiveBase(rows);renderStillOut()}).catch(()=>{})}
 function renderStillOut(){const q=($('outSearch')?.value||'').trim().toLowerCase(),rows=stillOutRows.filter(r=>!q||[r.driver,r.driverId,r.car,r.scanner].join(' ').toLowerCase().includes(q));if(!rows.length){$('outList').innerHTML='<div class="ok">'+esc(t('noActive'))+'</div>';return}$('outList').innerHTML='<div class="scroll"><table><tr><th>'+t('driver')+'</th><th>'+t('car')+'</th><th>'+t('scanner')+'</th><th>'+t('time')+'</th><th>'+t('assignedBy')+'</th></tr>'+rows.map(r=>'<tr><td><b>'+esc(r.driver)+'</b><br>'+esc(r.driverId)+'</td><td>'+esc(r.car)+'</td><td>'+esc(r.scanner)+'</td><td>'+esc(r.start)+'</td><td>'+esc(r.startedBy)+'</td></tr>').join('')+'</table></div>'}
-function loadHistory(){$('historyList').innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>';server('recentHistory',[TOKEN,200],rows=>{historyRows=rows;cacheAssignments(rows);renderHistory()}).catch(()=>{})}
+let historyRenderTimer=null,changesRenderTimer=null,historyRemoteDirty=false,changesRemoteDirty=false;
+function scheduleHistoryRender(){clearTimeout(historyRenderTimer);historyRenderTimer=setTimeout(renderHistory,140)}
+function scheduleChangesRender(){clearTimeout(changesRenderTimer);changesRenderTimer=setTimeout(renderChanges,140)}
+function loadHistory(){historyRemoteDirty=false;$('historyList').innerHTML='<div class="fastSkeleton"><span></span><span></span><span></span></div>';server('recentHistory',[TOKEN,200],rows=>{historyRows=rows;cacheAssignments(rows);renderHistory()}).catch(()=>{})}
 function assignmentConditionText(r){return r.fuelPercent!==''&&r.fuelPercent!=null?(r.fuelPercent+'%'):(r.rangeKm!==''&&r.rangeKm!=null?(r.rangeKm+' km'):'—')}
 function assignmentCardsHtml(rows){return '<div class="mobileCards">'+rows.map(r=>'<div class="assignmentCard"><div class="assignmentCardHead"><div><b>'+esc(r.driver||'—')+'</b><br><small>'+esc(r.driverId||'')+'</small></div><span class="pill">'+esc(localizeStatus(r.status))+'</span></div><div class="assignmentCardGrid"><div><small>'+esc(t('day'))+'</small><b>'+esc(r.day||'—')+'</b></div><div><small>'+esc(t('car'))+'</small><b>'+esc(r.car||'—')+'</b></div><div><small>'+esc(t('scanner'))+'</small><b>'+esc(r.scanner||'—')+'</b></div><div><small>'+esc(t('startLabel'))+'</small><span>'+esc(r.start||'—')+'</span></div><div><small>'+esc(t('returnLabel'))+'</small><span>'+esc(r.returnTime||'—')+'</span></div><div><small>'+esc(t('parkingPlace'))+'</small><span>'+esc(r.parkingPlace||'—')+'</span></div><div><small>'+esc(t('fuelRange'))+'</small><span>'+esc(assignmentConditionText(r))+'</span></div></div>'+adminAssignmentButtons(r)+'</div>').join('')+'</div>'}
 function assignmentTableHtml(rows,includePeople=true){let head='<tr><th>'+t('day')+'</th><th>'+t('driver')+'</th><th>'+t('car')+'</th><th>'+t('scanner')+'</th><th>'+t('startLabel')+'</th>';if(includePeople)head+='<th>'+t('assignedBy')+'</th>';head+='<th>'+t('returnLabel')+'</th>';if(includePeople)head+='<th>'+t('returnedBy')+'</th>';head+='<th>'+t('parkingPlace')+'</th><th>'+t('fuelRange')+'</th><th>'+t('status')+'</th>'+(USER?.role==='ADMIN'?'<th>'+t('actions')+'</th>':'')+'</tr>';return '<div class="tableWrap"><table>'+head+rows.map(r=>{let row='<tr><td>'+esc(r.day||'')+'</td><td><b>'+esc(r.driver||'')+'</b><br>'+esc(r.driverId||'')+'</td><td>'+esc(r.car||'')+'</td><td>'+esc(r.scanner||'')+'</td><td>'+esc(r.start||'—')+'</td>';if(includePeople)row+='<td>'+esc(r.startedBy||'—')+'</td>';row+='<td>'+esc(r.returnTime||'—')+'</td>';if(includePeople)row+='<td>'+esc(r.returnedBy||'—')+'</td>';row+='<td>'+esc(r.parkingPlace||'—')+'</td><td>'+esc(assignmentConditionText(r))+'</td><td><span class="pill">'+esc(localizeStatus(r.status))+'</span></td>'+(USER?.role==='ADMIN'?'<td>'+adminAssignmentButtons(r)+'</td>':'')+'</tr>';return row}).join('')+'</table></div>'}
-function renderHistory(){const q=($('historySearch')?.value||'').trim().toLowerCase(),rows=historyRows.filter(r=>!q||[r.driver,r.driverId,r.car,r.scanner,r.day,r.status,r.parkingPlace,r.fuelPercent,r.rangeKm].join(' ').toLowerCase().includes(q));$('historyList').innerHTML=rows.length?(assignmentTableHtml(rows,true)+assignmentCardsHtml(rows)):'<div class="muted">'+esc(t('noAssignmentHistory'))+'</div>'}
+function renderHistory(){const q=($('historySearch')?.value||'').trim().toLowerCase(),rows=historyRows.filter(r=>!q||[r.driver,r.driverId,r.car,r.scanner,r.day,r.status,r.parkingPlace,r.fuelPercent,r.rangeKm].join(' ').toLowerCase().includes(q));const html=window.matchMedia('(max-width:760px)').matches?assignmentCardsHtml(rows):assignmentTableHtml(rows,true);$('historyList').innerHTML=rows.length?html:'<div class="muted">'+esc(t('noAssignmentHistory'))+'</div>'}
 function localTodayIso(){const d=new Date(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+day}
 function assignmentEditorType(fallback){const car=$('editAsCar')?.value||'';const rec=masterIndex.car.get(plateKey(car));return String(rec?.type||fallback||'')}
 function updateAssignmentEditorFields(fallback){const returned=$('editAsStatus')?.value==='RETURNED',type=assignmentEditorType(fallback),electric=isElectricType(type);$('editReturnFields')?.classList.toggle('hidden',!returned);$('editFuelWrap')?.classList.toggle('hidden',!returned||electric);$('editRangeWrap')?.classList.toggle('hidden',!returned||!electric)}
@@ -997,7 +1034,7 @@ async function deleteAssignmentUI(assignmentId){
   optimisticAssignmentDelete(assignmentId);
   void apiCall('deleteAssignment',[TOKEN,assignmentId,backup?.day||'']).then(()=>{scheduleDataRefresh(450);if(currentPage==='history')setTimeout(loadHistory,650)}).catch(e=>{if(backup)cacheAssignments([backup]);showNotice('error',LANG==='de'?'ZUWEISUNG NICHT GELÖSCHT':'ASSIGNMENT NOT DELETED',localizeError(e?.message||String(e)),0);scheduleDataRefresh(100);if(currentPage==='history')setTimeout(loadHistory,250)})
 }
-function loadChanges(){$('changesList').textContent=t('loading');server('replacementHistory',[TOKEN,300],rows=>{changeRows=rows;renderChanges()}).catch(()=>{})}
+function loadChanges(){changesRemoteDirty=false;$('changesList').textContent=t('loading');server('replacementHistory',[TOKEN,300],rows=>{changeRows=rows;renderChanges()}).catch(()=>{})}
 function renderChanges(){const q=($('changesSearch')?.value||'').trim().toLowerCase(),rows=changeRows.filter(r=>!q||[r.driver,r.driverId,r.oldItem,r.newItem,r.type,r.reason].join(' ').toLowerCase().includes(q));$('changesList').innerHTML='<div class="scroll"><table><tr><th>'+t('time')+'</th><th>'+t('driver')+'</th><th>'+t('type')+'</th><th>'+t('oldItem')+'</th><th>'+t('newItem')+'</th><th>'+t('reason')+'</th><th>'+t('changedBy')+'</th></tr>'+rows.map(r=>'<tr><td>'+esc(r.timestamp)+'</td><td>'+esc(r.driver)+'<br>'+esc(r.driverId)+'</td><td>'+esc(localizeChangeType(r.type))+'</td><td>'+esc(r.oldItem)+'</td><td>'+esc(r.newItem)+'</td><td>'+esc(localizeReason(r.reason))+'</td><td>'+esc(r.changedBy)+'</td></tr>').join('')+'</table></div>'}
 
 function loadUsers(){$('usersList').textContent=t('loading');server('listUsers',[TOKEN],rows=>{$('usersList').innerHTML='<table><tr><th>'+t('user')+'</th><th>'+t('name')+'</th><th>'+t('role')+'</th><th>'+t('status')+'</th><th>'+t('actions')+'</th></tr>'+rows.map(r=>'<tr><td>'+esc(r.username)+'</td><td>'+esc(r.name)+'</td><td>'+esc(LANG==='de'&&String(r.role).toUpperCase()==='USER'?'BENUTZER':r.role)+'</td><td>'+statusBadge(r.active)+'</td><td><div class="adminActions"><button class="adminEdit" type="button" data-user="'+attr(r.username)+'" data-name="'+attr(r.name)+'" data-role="'+attr(r.role)+'" onclick="editUserUI(this.dataset.user,this.dataset.name,this.dataset.role)">'+esc(t('edit'))+'</button><button class="adminDelete" type="button" data-user="'+attr(r.username)+'" data-active="'+(!r.active)+'" onclick="toggleUser(this.dataset.user,this.dataset.active===\'true\')">'+(r.active?t('deactivate'):t('activate'))+'</button></div></td></tr>').join('')+'</table>'}).catch(()=>{})}
