@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetcontrol-v5-3-6-status-consistency-fix-1';
+const CACHE_NAME = 'fleetcontrol-v5-3-7-open-carry-fix-1';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
